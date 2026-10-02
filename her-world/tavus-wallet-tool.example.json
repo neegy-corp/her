@@ -1,0 +1,17 @@
+{
+  "name": "get_her_portfolio",
+  "description": "Read verified recent swaps and current holdings of the HER project wallet. Cannot trade, sign, transfer or submit transactions. No profit/loss or live price quotes are provided.",
+  "parameters": { "type": "object", "properties": {}, "additionalProperties": false },
+  "trigger_type": "in_call",
+  "origin": "llm",
+  "on_call": "generate_filler",
+  "on_resolve": "generate_response",
+  "delivery": {
+    "api": {
+      "url": "https://heronsol.live/api/her-wallet?action=portfolio",
+      "method": "GET",
+      "headers": { "Authorization": "Bearer REPLACE_WITH_SERVER_ONLY_HER_WALLET_READ_TOKEN" },
+      "timeout": 30
+    }
+  }
+}

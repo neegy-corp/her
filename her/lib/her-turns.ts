@@ -22,6 +22,12 @@ export class TurnGate {
     if (this.phase !== "speaking") return;
     this.phase = "settling"; this.changedAt = now; this.readyAt = now + 3000;
   }
+  reserve(now = Date.now()) {
+    if (this.phase === "settling" && now >= this.readyAt) this.phase = "ready";
+    if (this.phase !== "ready") return false;
+    this.phase = "waiting"; this.changedAt = now;
+    return true;
+  }
   take(now = Date.now()) {
     if (this.pending && now - this.pending.at > 20000) this.pending = null;
     if (this.phase === "settling" && now >= this.readyAt) this.phase = "ready";
@@ -32,11 +38,11 @@ export class TurnGate {
   }
   clear() { this.pending = null; }
 }
-export type HistoryTurn = { role: "viewer" | "host"; user?: string; character?: string; text: string };
+export type HistoryTurn = { role: "viewer" | "host" | "wallet"; user?: string; character?: string; text: string };
 export function cleanHistory(value: unknown): HistoryTurn[] {
   if (!Array.isArray(value)) return [];
   return value.slice(-20).flatMap(item => {
-    if (!item || !["viewer", "host"].includes(item.role) || typeof item.text !== "string" || !item.text.trim()) return [];
-    return [{ role: item.role as "viewer" | "host", text: item.text.slice(0, 700), ...(item.role === "host" && ['olivia','maya','ivy'].includes(item.character) ? {character:item.character} : {}), ...(item.role === "viewer" && typeof item.user === "string" ? { user: item.user.slice(0, 40) } : {}) }];
+    if (!item || !["viewer", "host", "wallet"].includes(item.role) || typeof item.text !== "string" || !item.text.trim()) return [];
+    return [{ role: item.role as HistoryTurn['role'], text: item.text.slice(0, 700), ...(item.role === "host" && ['olivia','maya','ivy'].includes(item.character) ? {character:item.character} : {}), ...(item.role === "viewer" && typeof item.user === "string" ? { user: item.user.slice(0, 40) } : {}) }];
   });
 }

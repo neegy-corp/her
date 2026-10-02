@@ -5,6 +5,7 @@ import { TurnGate, cleanHistory, type HistoryTurn } from "./her-turns";
 import { parsePumpUrl } from "./her";
 import { characterContext, characterEntrance, liveCharacters } from "./characters";
 import { recoveryDelay, withDeadline } from "./live-recovery";
+import { WalletAnnouncements, walletAnnouncement, walletFeed, walletMemory } from './wallet-updates';
 export function useLiveSession(onTranscript: (id: string, text: string) => void, onError: (text: string) => void) {
   const [state, setState] = useState<"idle" | "connecting" | "live" | "ending">("idle");
   const [video, setVideo] = useState<MediaStream | null>(null);
@@ -33,6 +34,7 @@ export function useLiveSession(onTranscript: (id: string, text: string) => void,
   const prepared = useRef<DailyCall|null>(null);
   const startedAt = useRef(Date.now());
   const nextSwitchAttempt = useRef(0);
+  const walletUpdates = useRef(new WalletAnnouncements());
 
   function remember(turn: HistoryTurn, id = "") {
     if (turn.role === 'host') turn = {...turn, character: character.current};
@@ -81,7 +83,7 @@ export function useLiveSession(onTranscript: (id: string, text: string) => void,
       });
   }
   async function end(resume = false) {
-    if (!resume) { keepRunning.current = false; if (reconnectTimer.current) clearTimeout(reconnectTimer.current); }
+    if (!resume) { keepRunning.current = false; walletUpdates.current = new WalletAnnouncements(); if (reconnectTimer.current) clearTimeout(reconnectTimer.current); }
     if (ending.current) return;
     ending.current = true;
     if(prepared.current){void prepared.current.destroy();prepared.current=null;void fetch("/api/session?handoff=abort",{method:"PATCH"});}
@@ -199,7 +201,7 @@ export function useLiveSession(onTranscript: (id: string, text: string) => void,
     gate.current.enqueue(user, text);
     setQueued(gate.current.pending ? 1 : 0);
   }
-  function clearQueue() { gate.current.clear(); setQueued(0); }
+  function clearQueue() { gate.current.clear(); walletUpdates.current.clear(); setQueued(0); }
   useEffect(() => {
     if (state !== "live") return;
     let lastFrames = -1; let lastProgress = Date.now(); let observedConversation=conversation.current;
@@ -232,6 +234,25 @@ export function useLiveSession(onTranscript: (id: string, text: string) => void,
     void syncCharacter();
     const characterTimer=setInterval(()=>void syncCharacter(),10000);
     const personaTimer = setInterval(() => void syncPersona(), 15000);
+    let walletBusy = false; let walletWarned = false;
+    async function syncWallet() {
+      if (walletBusy || disposed || switching.current) return;
+      walletBusy = true;
+      try {
+        const response = await fetch('/api/wallet', { cache: 'no-store', signal: AbortSignal.timeout(25000) });
+        if (!response.ok) throw new Error('Wallet updates are unavailable.');
+        const data = await response.json();
+        if (disposed) return;
+        if (data && typeof data === 'object' && 'enabled' in data && data.enabled === false) { walletUpdates.current = new WalletAnnouncements(); return; }
+        walletUpdates.current.ingest(walletFeed(data));
+        walletWarned = false;
+      } catch {
+        if (!disposed && !walletWarned) callbacks.current.onError('Wallet updates are paused; the host will continue without inventing trades.');
+        walletWarned = true;
+      } finally { walletBusy = false; }
+    }
+    void syncWallet();
+    const walletTimer = setInterval(() => void syncWallet(), 30000);
     const health = setInterval(() => {
       if(observedConversation!==conversation.current){observedConversation=conversation.current;lastFrames=-1;lastProgress=Date.now();}
       const media = document.querySelector<HTMLVideoElement>("video.live-video");
@@ -244,6 +265,15 @@ export function useLiveSession(onTranscript: (id: string, text: string) => void,
     }, 3000);
     const timer = setInterval(() => {
       if (!call.current || pauseTurns.current) return;
+      const walletUpdate = walletUpdates.current.peek();
+      if (walletUpdate && gate.current.reserve()) {
+        walletUpdates.current.take();
+        try {
+          call.current.sendAppMessage({ message_type: 'conversation', event_type: 'conversation.respond', conversation_id: conversation.current, properties: { text: walletAnnouncement(walletUpdate) } }, '*');
+          remember({ role: 'wallet', text: walletMemory(walletUpdate).slice(0, 700) });
+        } catch { callbacks.current.onError('Could not confirm the wallet announcement was delivered. It will not be replayed automatically.'); }
+        return;
+      }
       const turn = gate.current.take(); setQueued(gate.current.pending ? 1 : 0);
       if (!turn) {
         if (["waiting", "speaking"].includes(gate.current.phase) && Date.now() - gate.current.changedAt > 60000 && !warned.current) {
@@ -260,7 +290,7 @@ export function useLiveSession(onTranscript: (id: string, text: string) => void,
     // Renew before the provider's call limit; the saved dialogue resumes the topic.
     const limit = setInterval(() => { if(Date.now()-startedAt.current>510000&&!switching.current&&Date.now()>nextSwitchAttempt.current)void handoff(); },5000);
     const healthy = setTimeout(() => { recoveries.current = 0; }, 60000);
-    return () => { disposed = true; clearInterval(personaTimer); clearInterval(characterTimer); clearInterval(timer); clearInterval(health); clearInterval(limit); clearTimeout(healthy); };
+    return () => { disposed = true; clearInterval(walletTimer); clearInterval(personaTimer); clearInterval(characterTimer); clearInterval(timer); clearInterval(health); clearInterval(limit); clearTimeout(healthy); };
   }, [state]);
   useEffect(() => () => { lifecycle.current++; keepRunning.current = false; if (reconnectTimer.current) clearTimeout(reconnectTimer.current); const active = call.current; call.current = null; setVideo(null); setAudio(null); setState("idle"); if (active) { void active.destroy(); void fetch("/api/session", { method: "DELETE", keepalive: true }); } }, []);
   return { state, video, audio, speaking, queued, start, end, enqueue, clearQueue };
