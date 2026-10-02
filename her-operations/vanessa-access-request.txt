@@ -1,0 +1,6 @@
+Draft only — not sent
+
+To: support@tavus.io
+Subject: Access to Vanessa from the October 1 Griffin demo
+
+I have a Tavus Builder subscription and am building HER, a visibly disclosed AI livestream host that responds to pump.fun chat. I want to use the exact Vanessa shown in https://x.com/tavus/status/2105704169009246248, with her original face, voice and background. Vanessa does not appear in my available API face or voice catalog. Can you confirm whether this asset is available through CVI, or whether Griffin research-preview access is required? If available, please provide the supported integration, asset IDs, broadcast permissions and any additional pricing. The host would discuss AGI and crypto culture, may use ordinary profanity, and would not promise investment returns.

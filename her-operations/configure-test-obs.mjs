@@ -1,0 +1,28 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import crypto from 'node:crypto';
+const root=path.join(process.env.APPDATA,'obs-studio');
+const profile=path.join(root,'basic/profiles/HER-Test');
+const scenePath=path.join(root,'basic/scenes/HER-Test.json');
+if(fs.existsSync(profile)||fs.existsSync(scenePath))throw new Error('Test configuration already exists; inspect before replacing.');
+process.stdout.write('Ready for stream configuration on hidden stdin.\n');
+if(process.stdin.isTTY)process.stdin.setRawMode(true);
+process.stdin.setEncoding('utf8');
+let input='';process.stdin.on('data',chunk=>{input+=chunk;if(!/[\r\n]/.test(input))return;process.stdin.pause();const config=JSON.parse(input.trim());
+if(config.server!=='https://pump-prod-tg2x8veh.whip.livekit.cloud/w'||!config.token)throw new Error('Invalid destination configuration');
+fs.mkdirSync(profile,{recursive:true});
+const ini=fs.readFileSync(path.join(root,'basic/profiles/HER/basic.ini'),'utf8').replace('Name=HER','Name=HER Test');
+fs.writeFileSync(path.join(profile,'basic.ini'),ini);
+fs.writeFileSync(path.join(profile,'service.json'),JSON.stringify({type:'whip_custom',settings:{server:config.server,bearer_token:config.token}},null,2));
+const data=JSON.parse(fs.readFileSync(path.join(root,'basic/scenes/HER.json'),'utf8'));
+data.name='HER Test';
+const browser={name:'HER live camera and voice',uuid:crypto.randomUUID(),id:'browser_source',versioned_id:'browser_source',settings:{url:'http://127.0.0.1:5173',width:1920,height:1080,fps:30,fps_custom:true,reroute_audio:true,shutdown:false,restart_when_active:false,css:'body { margin: 0; overflow: hidden; }'},mixers:1,sync:0,flags:0,volume:1,balance:0.5,enabled:true,muted:false,hotkeys:{},monitoring_type:0,private_settings:{}};
+const scene={name:'HER — live camera',uuid:crypto.randomUUID(),id:'scene',versioned_id:'scene',settings:{id_counter:1,custom_size:false,items:[{name:browser.name,source_uuid:browser.uuid,id:1,visible:true,locked:true,rot:0,align:5,pos:{x:0,y:0},scale:{x:1,y:1},bounds_type:0,bounds:{x:0,y:0},crop_left:0,crop_right:0,crop_top:0,crop_bottom:0}]},mixers:0,sync:0,flags:0,volume:1,enabled:true,muted:false,hotkeys:{},private_settings:{}};
+data.sources.push(browser,scene);data.scene_order.push({name:scene.name});data.current_scene=scene.name;data.current_program_scene=scene.name;
+for(const key of Object.keys(data))if(/^DesktopAudioDevice|^AuxAudioDevice/.test(key))delete data[key];
+data.modules ??= {};
+data.modules['output-timer']={streamTimerHours:0,streamTimerMinutes:3,streamTimerSeconds:0,recordTimerHours:0,recordTimerMinutes:0,recordTimerSeconds:0,autoStartStreamTimer:true,autoStartRecordTimer:false,pauseRecordTimer:true};
+fs.writeFileSync(scenePath,JSON.stringify(data,null,2));
+console.log('Dedicated HER Test profile and browser camera configured; three-minute stream stop timer set.');process.exit(0);
+});
+
