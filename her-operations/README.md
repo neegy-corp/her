@@ -6,6 +6,8 @@ Olivia is the default live host. Maya and Ivy have distinct native voices and pe
 
 See `../her/STREAM-RECOVERY.md` and `../her-world/BURNS.md` for current operation and limitations. Tavus Phoenix 4.5 is the video model; Griffin is not integrated. All dated notes below are historical and do not describe the current live state.
 
+An isolated autonomous **paper** experiment is available in [PAPER-TRADING.md](PAPER-TRADING.md). It uses public pool data and read-only Jupiter quotes, keeps a separate simulated journal, and cannot sign transactions or publish results as real wallet activity. Trade and daily loss limits must be configured explicitly before starting it.
+
 ## Historical setup and test notes
 
 ## Selected avatar — October 2, 2026
