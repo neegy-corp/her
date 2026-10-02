@@ -6,8 +6,8 @@ Female AI livestream host for pump.fun: a Tavus video conversation, a real-time 
 
 - A supervised public test reached the selected pump.fun coin at 1920×1080. Real chat messages reached the authenticated relay.
 - The black side bars were removed and audio/video playback was combined into one stable stream. Exact lip sync still needs viewer acceptance.
-- The requested replacement is **Vanessa from Tavus's Griffin launch film**, with her original voice and background. This replacement is **not complete**: Vanessa is unavailable in the account's face/voice library, and Griffin remains a restricted research preview. See the [access-request draft](her-operations/vanessa-access-request.txt).
-- The existing custom HER face remains configured locally. The public test and all paid Tavus sessions were stopped. Nothing starts a broadcast or paid session automatically.
+- The user selected **Olivia - Office** (`rca764a6a197`) on October 2, 2026, with her original voice (`vc18af66f6f57`). Her Phoenix-4.5 face and fine-tuning are complete; local and hosted runtime configuration and the HER PAL now use this selection. A fresh live audition remains pending. This supersedes the unavailable Vanessa request.
+- The public test and paid Tavus sessions are stopped. Nothing starts a broadcast or paid session automatically. The included portrait and profile-picture files depict the previous custom character, not Olivia.
 
 ## Repository layout
 

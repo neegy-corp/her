@@ -1,5 +1,9 @@
 # HER local operations
 
+## Selected avatar — October 2, 2026
+
+The user explicitly selected **Olivia - Office** (`rca764a6a197`), with her original voice (`vc18af66f6f57`). Tavus confirmed completed Phoenix-4.5 training and fine-tuning. The HER PAL and local/hosted runtime settings have been updated. This supersedes the custom HER face and the earlier Vanessa request. No public stream was started for this switch; a new live audition is still pending. The existing portrait/PFP assets are the previous custom character and do not depict Olivia.
+
 ## Latest status — October 1, 2026, 23:42 ET
 
 This section supersedes the earlier setup notes below. The user selected the existing PumpTalk mint `38A2GgZU9BKFNNnqGgeDjtxH2eTUZHqVH4MVSCeFpump`; no coin or wallet transaction was created. The dedicated OBS **HER Test** profile has the supplied WHIP destination stored in OBS, with no desktop or microphone capture. OBS's browser source captures the local studio's video and voice.
