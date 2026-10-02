@@ -9,7 +9,9 @@ export async function GET(request: Request) {
     const token = setting('HER_WALLET_READ_TOKEN');
     if (url.protocol !== 'https:' || url.username || url.password || token.length < 32) throw new Error('Wallet feed is not configured.');
     url.searchParams.set('action', 'feed');
-    const response = await fetch(url, { headers: { Authorization: `Bearer ${token}` }, redirect: 'error', cache: 'no-store', signal: AbortSignal.timeout(20000) });
+    // Workerd supports manual/follow only. Reject redirects without forwarding
+    // the private read token to another destination.
+    const response = await fetch(url, { headers: { Authorization: `Bearer ${token}` }, redirect: 'manual', cache: 'no-store', signal: AbortSignal.timeout(20000) });
     if (!response.ok) throw new Error('Wallet feed is unavailable.');
     const raw = await response.text();
     if (raw.length > 64000) throw new Error('Wallet feed exceeds the tracking limit.');
