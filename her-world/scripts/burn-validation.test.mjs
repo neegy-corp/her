@@ -1,0 +1,9 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { validateBurn } from '../lib/burn-validation.ts';
+const expected={wallet:'owner',mint:'mint',program:'token-program',raw_amount:'100000',id:'request-1',created_at:100000,expires:200000};
+const valid=()=>({blockTime:120,meta:{err:null},transaction:{message:{accountKeys:[{pubkey:'owner',signer:true}],instructions:[{programId:'token-program',parsed:{type:'burnChecked',info:{mint:'mint',authority:'owner',tokenAmount:{amount:'100000'}}}},{programId:'MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr',parsed:'HER:request-1'}]}}});
+test('accepts one finalized matching burn bound to the intent',()=>assert.equal(validateBurn(valid(),expected),true));
+test('rejects failed or missing transactions',()=>{assert.throws(()=>validateBurn(null,expected));const tx=valid();tx.meta.err='failed';assert.throws(()=>validateBurn(tx,expected));});
+test('rejects different wallet, mint, amount, memo and token program',()=>{for(const mutate of [tx=>tx.transaction.message.accountKeys[0].signer=false,tx=>tx.transaction.message.instructions[0].parsed.info.mint='other',tx=>tx.transaction.message.instructions[0].parsed.info.authority='other',tx=>tx.transaction.message.instructions[0].parsed.info.tokenAmount.amount='1',tx=>tx.transaction.message.instructions[1].parsed='HER:other',tx=>tx.transaction.message.instructions[0].programId='fake']){const tx=valid();mutate(tx);assert.throws(()=>validateBurn(tx,expected));}});
+test('rejects stale, future or ambiguous burns',()=>{const tx=valid();tx.blockTime=1;assert.throws(()=>validateBurn(tx,expected));tx.blockTime=300;assert.throws(()=>validateBurn(tx,expected));tx.blockTime=120;tx.transaction.message.instructions.push(tx.transaction.message.instructions[0]);assert.throws(()=>validateBurn(tx,expected));});

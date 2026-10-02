@@ -1,5 +1,13 @@
 # HER local operations
 
+## Current operation — October 2, 2026
+
+Olivia is the default live host. Maya and Ivy have distinct native voices and personalities; verified burn rounds on heronsol.live select the next character every 30 minutes. The local studio now uses `node scripts/run-studio.mjs` for crash recovery and the OBS browser URL `http://127.0.0.1:5173/?camera=1` for automatic camera startup. Opening that source can start paid Tavus sessions. OBS reconnect is enabled with 9,999 retries and the automatic stream stop timer is disabled. The setup script now preserves those settings for new profiles.
+
+See `../her/STREAM-RECOVERY.md` and `../her-world/BURNS.md` for current operation and limitations. Tavus Phoenix 4.5 is the video model; Griffin is not integrated. All dated notes below are historical and do not describe the current live state.
+
+## Historical setup and test notes
+
 ## Selected avatar — October 2, 2026
 
 The user explicitly selected **Olivia - Office** (`rca764a6a197`), with her original voice (`vc18af66f6f57`). Tavus confirmed completed Phoenix-4.5 training and fine-tuning. The HER PAL and local/hosted runtime settings have been updated. This supersedes the custom HER face and the earlier Vanessa request. No public stream was started for this switch; a new live audition is still pending. The existing portrait/PFP assets are the previous custom character and do not depict Olivia.

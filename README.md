@@ -1,59 +1,57 @@
 # HER
 
-Female AI livestream host for pump.fun: a Tavus video conversation, a real-time chat reader, and an OBS camera feed. This repository contains the current app, independently implemented chat integration, Windows broadcasting tools, artwork, and operating notes.
+AI livestream host for pump.fun, with a public character-voting site at https://heronsol.live.
 
-## Current status
+## Current implementation
 
-- A supervised public test reached the selected pump.fun coin at 1920×1080. Real chat messages reached the authenticated relay.
-- The black side bars were removed and audio/video playback was combined into one stable stream. Exact lip sync still needs viewer acceptance.
-- The user selected **Olivia - Office** (`rca764a6a197`) on October 2, 2026, with her original voice (`vc18af66f6f57`). Her Phoenix-4.5 face and fine-tuning are complete; local and hosted runtime configuration and the HER PAL now use this selection. A fresh live audition remains pending. This supersedes the unavailable Vanessa request.
-- The public test and paid Tavus sessions are stopped. Nothing starts a broadcast or paid session automatically. The included portrait and profile-picture files depict the previous custom character, not Olivia.
+- Olivia, Maya and Ivy each have their own Tavus face, native voice and personality.
+- The studio reads one viewer comment at a time, including the sender, and preserves conversation history and host identity across reconnects and character switches.
+- New hosts acknowledge real character changes once; routine renewals do not reintroduce the host.
+- Wallet-connected visitors can burn at least 10,000 HER, with larger custom amounts supported. Verified totals determine each 30-minute round's character. Ties and empty rounds retain the selection.
+- Supabase stores wallet sessions, burn intents, finalized receipts and round state. The private controller prepares the replacement video before retiring the previous session.
+- Camera connections retry indefinitely with bounded backoff. A supervisor restarts a crashed studio. OBS automatic stop timing is disabled, with reconnect enabled.
+
+The video model is **Tavus Phoenix 4.5**, not Griffin. The host discusses learning through simulated trading; no real trade execution or deposits are implemented. Stage access remains disabled until separately configured.
 
 ## Repository layout
 
 | Directory | Contents |
 | --- | --- |
-| `her/` | React/Vinext studio, server API routes, persona, chat relay, tests, and Sites configuration |
-| `her-operations/` | pump.fun reader, Windows start/stop scripts, OBS profile setup, and latest test notes |
-| `assets/` | Generated HER profile picture; the original host portrait is in `her/public/` |
+| `her/` | Studio, Tavus integration, chat relay, personalities, handovers and recovery |
+| `her-world/` | Website, wallet connection, verified burns, rounds, Supabase functions and migrations |
+| `her-operations/` | Read-only pump.fun reader and Windows/OBS setup tools |
+| `assets/` | Earlier artwork; current character images are in the projects' public directories |
 
-The app snapshot comes from source commit `3a85e5d7bfbbc58066686486772ca8a847d25cd5`. Older app research notes describe earlier stages; [the latest operations status](her-operations/README.md) supersedes them.
+Studio source snapshot: `f59ccf4`. Website source snapshot: `2489dc6`. Both include additional environment-template documentation in this combined snapshot. Earlier dated app/operations notes are historical; this README and the recovery/burn documents describe current behavior.
 
 ## Local setup
 
-Requires Node.js 24+, npm, and OBS Studio 30+ for WHIP output. OBS helper setup also uses Python. The broadcaster runs on Windows; keep the PC awake while streaming.
+Requires Node.js 24+, npm, Windows and OBS with WHIP support.
 
-1. In `her/`, run `npm ci` and copy `.env.example` to `.env`.
-2. Configure the Tavus API key, available face ID, and HER PAL ID in that local `.env`. Use `scripts/setup-her.mjs` as described in the [app README](her/README.md). Do not assume Vanessa is available or use an invented asset ID.
-3. From PowerShell in `her-operations/`, run `./Start-HER.ps1 -Mint <coin-mint>`. This creates a random local relay token in its ignored `.env` and starts the reader and relay. It does not create a coin or start a paid session.
-4. Set the app's `PUMP_CHAT_FEED_URL=http://127.0.0.1:4501/feed` for local development and set `PUMP_CHAT_FEED_TOKEN` to the relay's `HER_RELAY_TOKEN`. Hosted deployments require an authenticated HTTPS relay.
-5. From `her/`, run `node --env-file=.env scripts/run-framework.mjs dev`. Open the displayed localhost address, save the chosen pump.fun URL in settings, and explicitly start the avatar when ready.
-6. Use the OBS browser source at `http://127.0.0.1:5173`, 1920×1080 at 30 fps, with browser audio routed through OBS. Enter the stream credentials directly in OBS. Only start streaming after checking the clean camera output and sound.
+1. Run `npm ci` in `her/`, copy `.env.example` to `.env`, and configure Tavus. `HER_VOICE_MODE=face` preserves each character's voice.
+2. Run `./Start-HER.ps1 -Mint <coin-mint>` in `her-operations/`. Match the studio relay credential to the generated local relay credential and set `PUMP_CHAT_FEED_URL=http://127.0.0.1:4501/feed`.
+3. Set the same private `HER_CONTROL_TOKEN` in the studio and website server environments.
+4. Run `node scripts/run-studio.mjs` in `her/` to supervise the studio on port 5173.
+5. OBS uses `http://127.0.0.1:5173/?camera=1`, 1920x1080, 30 fps, with browser audio. **Opening this source starts paid Tavus sessions when configured.** Enter stream credentials directly in OBS.
 
-The OBS scripts preserve existing collections and refuse to overwrite the dedicated HER profiles. `setup-obs.py` creates the baseline standby collection; `configure-test-obs.mjs` creates the test collection and expects `{server,token}` through hidden terminal input. It is currently scoped to the tested pump.fun WHIP server and has a three-minute output timer. The optional `-Tunnel` launcher flag requires Cloudflared in `her-operations/bin/`; no vendor binary is committed. See [operations](her-operations/README.md) before using it.
+Tavus calls rotate before their ten-minute limit; this is not an overall stream stop timer. See [recovery operations](her/STREAM-RECOVERY.md). To shut down intentionally, stop OBS, end the avatar session, stop the supervisor and its child, and run `Stop-HER.ps1`.
 
-End the avatar session, stop OBS output, then run `./Stop-HER.ps1` to stop the launcher's reader, relay, and optional tunnel. The app also caps paid sessions at ten minutes.
+## Public website
+
+Run `npm ci` in `her-world/` and configure its environment template. See [burn voting](her-world/BURNS.md), SQL in `her-world/db/`, migrations in `her-world/supabase/migrations/`, and the `her-database` Edge Function. The gateway targets the existing Supabase project; forks must change the endpoint and provision their own database and roles.
+
+The website runs on Vercel. External Solana wallets connect through the Turnkey bridge without email signup. Managed Turnkey organization/auth proxy IDs must be configured separately if that optional flow is enabled. Burns remain disabled in the template until the mint, RPC, database and live controller are ready.
 
 ## Verification
 
-From `her/`:
+- Studio: `npx tsc --noEmit` and `node --test tests/*.test.mjs` (17 tests).
+- Reader: `node --test reader.test.mjs` in `her-operations/`.
+- Website: `npx tsc --noEmit`, `node --test scripts/burn-amount.test.mjs scripts/burn-validation.test.mjs`, and `npm run build` in `her-world/`. Wallet integration tests require a configured local app and database.
 
-```sh
-npx tsc --noEmit
-node --experimental-strip-types --test tests/contracts.test.mjs tests/relay.test.mjs
-npm run build
-```
+Prior checks include production wallet auth, rollback-only settlement tests, live handovers and studio crash recovery. No real user tokens were burned in testing.
 
-From `her-operations/`:
+## Credentials and uptime
 
-```sh
-node --test reader.test.mjs
-```
+Credentials, browser sessions, logs, recordings, runtime state and dependencies are excluded. Configure credentials separately on each deployment. Pushing this snapshot does not itself redeploy running services.
 
-The tests cover input validation, relay authorization and room isolation, duplicate handling, queue delivery, and preservation of ordinary profanity. They do not establish subjective avatar quality or guarantee the unofficial pump.fun chat protocol will remain unchanged.
-
-## Credentials and deployment
-
-Only empty environment templates are committed. API keys, stream credentials, local authentication state, recordings, logs, dependencies, and build output remain local. The existing Sites project identifier is retained so the app can be updated without creating a replacement site. GitHub pushes do not automatically redeploy it.
-
-The host retains the HER name, visible AI disclosure, AGI/trenches persona, and ordinary profanity support. Provider moderation still applies. No wallet signing, purchases, trades, or return promises are implemented.
+The computer, OBS, internet and provider account must remain available. Recovery cannot guarantee service during power loss, exhausted credit or provider outages. Tavus usage and handover overlap can incur charges; recovery does not purchase or change plans.

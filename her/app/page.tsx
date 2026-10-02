@@ -37,6 +37,13 @@ export default function Home() {
   const autoRef = useRef(auto); autoRef.current = auto;
   const stage = useRef<HTMLDivElement>(null);
   const chatEnd = useRef<HTMLDivElement>(null);
+  const cameraStarted=useRef(false);
+  useEffect(()=>{if(new URLSearchParams(location.search).get('camera')==='1')setBroadcast(true);},[]);
+  useEffect(()=>{
+    if(!config.video||cameraStarted.current||new URLSearchParams(location.search).get('camera')!=='1')return;
+    cameraStarted.current=true;
+    void liveRef.current.end().then(()=>liveRef.current.start());
+  },[config.video]);
   useEffect(() => {
     if (live.state === "live") { setSettings(false); setBroadcast(true); }
   }, [live.state]);
@@ -48,9 +55,47 @@ export default function Home() {
     window.addEventListener("keydown", exit);
     return () => { document.title = previous; window.removeEventListener("keydown", exit); };
   }, [broadcast]);
-  useEffect(() => { const stored = localStorage.getItem("her-stream") || ""; setStreamUrl(stored); setSavedStream(stored); void fetch("/api/status").then(r => { if (!r.ok) throw new Error(); return r.json() as Promise<{ video: boolean; chat: boolean }>; }).then(setConfig).catch(() => setNotice("Connection status is unavailable. Rehearsal is still available.")); }, []);
+  useEffect(() => {
+    const stored = localStorage.getItem("her-stream") || ""; setStreamUrl(stored); setSavedStream(stored);
+    let disposed=false; let retry: ReturnType<typeof setTimeout> | undefined;
+    async function status(){
+      try {
+        const r=await fetch('/api/status',{signal:AbortSignal.timeout(10000)});
+        if(!r.ok)throw new Error('Status unavailable');
+        const data=await r.json() as {video:boolean;chat:boolean};
+        if(!disposed)setConfig(data);
+      } catch {
+        if(!disposed){setNotice('Reconnecting to the studio automatically…');retry=setTimeout(()=>void status(),5000);}
+      }
+    }
+    void status();return()=>{disposed=true;if(retry)clearTimeout(retry);};
+  }, []);
   useEffect(() => { const container = chatEnd.current?.parentElement; if (container) container.scrollTop = container.scrollHeight; }, [messages]);
   useEffect(() => { if (!auto) live.clearQueue(); }, [auto]);
+  useEffect(() => {
+    if (!config.chat || !["127.0.0.1", "localhost"].includes(window.location.hostname)) return;
+    let stopped = false;
+    let lastCoin = "";
+    async function syncLocalCoin() {
+      try {
+        const response = await fetch("/active-stream.json", { cache: "no-store" });
+        if (!response.ok) return;
+        const data = await response.json() as { mint?: string };
+        const url = `https://pump.fun/coin/${data.mint || ""}`;
+        if (stopped || !parsePumpUrl(url)) return;
+        if (lastCoin === url) return;
+        lastCoin = url;
+        liveRef.current.clearQueue();
+        setSavedStream(url);
+        setStreamUrl(url);
+        localStorage.setItem("her-stream", url);
+        setFeedEnabled(true);
+      } catch { /* Keep the selected feed during a transient local fetch failure. */ }
+    }
+    void syncLocalCoin();
+    const timer = setInterval(() => void syncLocalCoin(), 2000);
+    return () => { stopped = true; clearInterval(timer); };
+  }, [config.chat]);
   useEffect(() => {
     if (!feedEnabled || !savedStream) return;
     let stopped = false; let timer: ReturnType<typeof setTimeout>; let after = Date.now(); const seen = new Set<string>(); const abort = new AbortController();
@@ -114,7 +159,7 @@ export default function Home() {
     <header className="topbar"><a className="wordmark" href="/" aria-label="HER home">HER<span>●</span></a><div className="top-divider"/><span className="product-name">A presence. Not just a reply.</span><div className="top-right"><span className="studio-tag"><span className="status-dot"/> PRIVATE STUDIO</span><button className="icon-button" aria-label="Open studio settings" onClick={() => setSettings(true)}><Settings2 size={18}/></button></div></header>
     <section className="page-heading"><div><div className="eyebrow">THE ROOM IS YOURS</div><h1>Meet your new main character.</h1></div><button className="quiet-button" onClick={() => setSettings(true)}><Link2 size={15}/> Connect pump.fun <ArrowUpRight size={15}/></button></section>
     <div className="studio-grid"><section className="camera-column"><div className={live.video ? "camera-stage has-live-video" : "camera-stage"} ref={stage}>
-      <img style={{ opacity: live.video ? 0 : 1 }} className="host-image" src="/her-host.png" alt="HER, a fictional adult female AI host in her warmly lit recording studio"/>
+      <img style={{ opacity: live.video ? 0 : 1 }} className="host-image" src="/olivia-standby.jpg" alt="Olivia, HER's AI host, in her office"/>
       <HerMedia video={live.video} audio={live.audio} muted={muted} onBlocked={() => setNotice("Click the sound button to allow live audio in your browser.")}/><div className="camera-shade"/><div className="stage-top"><span className={running ? "stage-badge active" : "stage-badge"}><span/> {live.state === "live" ? "LIVE AI" : live.state === "connecting" ? "CONNECTING" : running ? "REHEARSAL" : "STANDBY"}</span><span className="stage-format">HER STUDIO / 001</span></div>
       <div className="camera-copy"><span className="ai-label">YOUR AI HOST</span><div className="host-name">HER<span>AI</span></div><p>A little curiosity. A lot of personality.</p></div>
       <div className="caption"><AudioLines size={18}/><p>{caption}</p></div><div className="stage-bottom"><span><span className="status-dot"/> {live.state === "live" ? (live.speaking ? "HER is speaking · AI generated" : `Live AI video · ${live.queued} queued`) : running ? "Browser voice · scripted preview" : "Character preview · AI generated"}</span><div><button className="stage-button" aria-label={muted ? "Unmute HER" : "Mute HER"} onClick={() => { setMuted(!muted); window.speechSynthesis?.cancel(); }}>{muted ? <VolumeX size={18}/> : <Volume2 size={18}/>}</button><button className="stage-button" aria-label="Fullscreen camera" onClick={() => { if (document.fullscreenElement) void document.exitFullscreen(); else void stage.current?.requestFullscreen().catch(() => setNotice("Fullscreen is unavailable in this browser.")); }}><Maximize2 size={17}/></button></div></div>

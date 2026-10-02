@@ -4,6 +4,6 @@
   "voice_id": "vc18af66f6f57",
   "model": "phoenix-4.5",
   "selected_on": "2026-10-02",
-  "status": "Configured; next live audition pending",
+  "status": "Default host verified live; Maya and Ivy available through character voting",
   "note": "Replaces the custom HER face and the unavailable Vanessa request. HER personality and AI disclosure remain active. This is configuration metadata; runtime values are stored in local and hosted environment settings."
 }

@@ -21,3 +21,8 @@
 **/*.tar.gz
 **/service.json
 .DS_Store
+**/.vercel/
+**/.agents/
+**/.codex/
+**/supabase/.temp/
+**/public/active-stream.json

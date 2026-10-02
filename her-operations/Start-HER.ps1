@@ -24,6 +24,7 @@ try {
     $herStarted += $herProxy
   }
   @($herStarted | ForEach-Object { @{ id=$_.Id; started=$_.StartTime.ToUniversalTime().ToString('o') } }) | ConvertTo-Json | Set-Content 'processes.pid'
+  @{ mint=$Mint } | ConvertTo-Json | Set-Content (Join-Path $PSScriptRoot '../her/public/active-stream.json')
   Write-Output 'HER reader and authenticated relay started. Logs: reader.log and relay.log.'
   if ($Tunnel) { Write-Output 'Temporary HTTPS address will appear in tunnel-error.log. It changes on restart. Never use it as an unattended production dependency.' }
   Write-Output 'No coin was created and no broadcast or paid video session was started.'

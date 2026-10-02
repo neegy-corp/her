@@ -10,7 +10,8 @@ mkdirSync('.sites-runtime', { recursive: true });
 const state = existsSync(statePath) ? JSON.parse(readFileSync(statePath, 'utf8')) : {};
 const faceId = env.TAVUS_FACE_ID || state.face_id;
 const palId = env.TAVUS_PAL_ID || state.pal_id;
-const voice = { voiceId: env.TAVUS_VOICE_ID || undefined, engine: env.HER_TTS_ENGINE || undefined, externalVoiceId: env.HER_EXTERNAL_VOICE_ID || undefined, model: env.HER_TTS_MODEL || undefined, apiKey: env.HER_TTS_API_KEY || undefined };
+// Face mode preserves each character's own voice when the shared PAL switches faces.
+const voice = env.HER_VOICE_MODE === 'face' ? {} : { voiceId: env.TAVUS_VOICE_ID || undefined, engine: env.HER_TTS_ENGINE || undefined, externalVoiceId: env.HER_EXTERNAL_VOICE_ID || undefined, model: env.HER_TTS_MODEL || undefined, apiKey: env.HER_TTS_API_KEY || undefined };
 const save = () => writeFileSync(statePath, JSON.stringify(state, null, 2));
 const output = value => console.log(JSON.stringify(value, (k, v) => /api_key/i.test(k) && v ? '[redacted]' : v, 2));
 async function api(path, method = 'GET', body) {
@@ -47,6 +48,7 @@ try {
   } else if (command === 'create-pal' || command === 'update-pal') {
     if (!faceId) throw new Error('Create or configure a female face first.');
     const config = buildPalConfig(faceId, voice);
+    if (env.HER_VOICE_MODE === 'face') config.layers.tts = { tts_engine: 'tavus-auto', tts_emotion_control: true };
     const quality = faceReadiness(await api(`faces/${faceId}`));
     if (!quality.ready) throw new Error(quality.reason);
     if (command === 'create-pal') {

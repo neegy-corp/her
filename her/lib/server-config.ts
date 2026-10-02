@@ -8,7 +8,8 @@ export async function studioUser() {
   if (import.meta.env.DEV) return { userId: "local-director", email: "local@localhost", displayName: "Director", fullName: null };
   return null;
 }
-export const json = (body: unknown, status = 200, headers: HeadersInit = {}) => Response.json(body, { status, headers: { "Cache-Control": "no-store", ...headers } });
+export { json } from './http';
+import { json } from './http';
 export async function authorize(request: Request, mutation = false) {
   if (mutation && request.headers.get("origin") !== new URL(request.url).origin) return json({ error: "Request origin not allowed." }, 403);
   if (!(await studioUser())) return json({ error: "Sign in to your private HER studio." }, 401);
@@ -28,13 +29,13 @@ async function signature(value: string) {
   const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(setting("TAVUS_API_KEY")), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
   return Array.from(new Uint8Array(await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(value)))).map(x => x.toString(16).padStart(2, "0")).join("");
 }
-export async function sessionCookie(id: string, userId: string, secure: boolean) {
+export async function sessionCookie(id: string, userId: string, secure: boolean, name = "her-session") {
   const value = `${id}.${Date.now() + 660000}.${userId}`;
-  return `her-session=${encodeURIComponent(value + "." + await signature(value))}; HttpOnly; SameSite=Strict; Path=/; Max-Age=660${secure ? "; Secure" : ""}`;
+  return `${name}=${encodeURIComponent(value + "." + await signature(value))}; HttpOnly; SameSite=Strict; Path=/; Max-Age=660${secure ? "; Secure" : ""}`;
 }
-export async function getSession(request: Request): Promise<string | null> {
+export async function getSession(request: Request, name = "her-session"): Promise<string | null> {
   try {
-    const raw = request.headers.get("cookie")?.split(";").map(x => x.trim()).find(x => x.startsWith("her-session="))?.slice(12);
+    const raw = request.headers.get("cookie")?.split(";").map(x => x.trim()).find(x => x.startsWith(`${name}=`))?.slice(name.length + 1);
     if (!raw) return null;
     const parts = decodeURIComponent(raw).split("."); const sig = parts.pop(); const user = await studioUser();
     if (parts.length !== 3 || !user || user.userId !== parts[2] || Number(parts[1]) <= Date.now() || !/^c[a-zA-Z0-9_-]+$/.test(parts[0])) return null;

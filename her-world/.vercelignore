@@ -1,0 +1,10 @@
+.env*
+.git
+.next
+.vinext
+.wrangler
+.sites-runtime
+dist
+node_modules
+db/*.pem
+tsconfig.tsbuildinfo

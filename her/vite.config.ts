@@ -53,6 +53,8 @@ export default defineConfig(async ({ command }) => {
 
   return {
     server: {
+      // OBS must not reload its live media session when source files are edited.
+      ...(!managedLinux ? { hmr: false, watch: null } : {}),
       ...(managedLinux
         ? { host: "0.0.0.0", allowedHosts: ["terminal.local"] }
         : {}),
