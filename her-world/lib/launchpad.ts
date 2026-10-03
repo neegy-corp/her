@@ -134,7 +134,7 @@ export function newDraft(_preset = "blank"): CharacterDraft {
     coinBanner: "",
     rightsConfirmed: false,
     updatedAt: Date.now(),
-    show: defaultShow(),
+    show: { ...defaultShow(), continuous: true, bufferMinutes: 5 },
   };
 }
 export const samplePortrait = (_draft: CharacterDraft | null) =>

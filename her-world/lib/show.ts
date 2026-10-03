@@ -9,12 +9,15 @@ export const clipSchema = z.object({
   mode: z.enum(["performance", "speech"]),
 });
 export const showSchema = z.object({
-  clips: z.array(clipSchema).max(8),
+  clips: z.array(clipSchema).max(48),
+  continuous: z.boolean().optional(),
+  bufferMinutes: z.union([z.literal(5), z.literal(10)]).optional(),
   generative: z.boolean(),
   maxGenerations: z.number().int().min(0).max(20),
   chatWindow: z.number().int().min(10).max(120),
 });
 export type ShowPlan = z.infer<typeof showSchema>;
+export const preparedSeconds = (plan: ShowPlan) => plan.clips.reduce((total, clip) => total + clip.duration, 0);
 export type ShowClip = z.infer<typeof clipSchema>;
 export type ChatMessage = {
   id: string;

@@ -12,13 +12,14 @@ import {
   type ShowPlan,
   type ShowState,
 } from "./show";
-export type RenderedClip = { id: string; url: string };
+export type RenderedClip = { id: string; url: string; duration?: number; script?: string };
 export type ShowDriver = {
   play: (clip: RenderedClip, signal: AbortSignal) => Promise<void>;
   reply: (message: ChatMessage, signal: AbortSignal) => Promise<RenderedClip>;
   generate: (
     messages: ChatMessage[],
     signal: AbortSignal,
+    context?: { sequence: number; recentScripts: string[] },
   ) => Promise<RenderedClip>;
 };
 // One runner per character/mint. No global playlist, chat queue, credentials or generation state.

@@ -14,7 +14,7 @@ Deno.serve(async (request: Request) => {
   let statements: { query: string; values: (string | number | boolean | null)[] }[];
   try {
     const raw = await request.text();
-    if (raw.length > 32000) return response({ error: 'Request too large.' }, 413);
+    if (raw.length > 128000) return response({ error: 'Request too large.' }, 413);
     statements = JSON.parse(raw).statements;
     if (!Array.isArray(statements) || !statements.length || statements.length > 12 ||
       statements.some(s => !allowed.has(s.query) || !Array.isArray(s.values) ||

@@ -52,6 +52,10 @@ async function handle(req: Request) {
         );
       if (req.method === "GET") {
         const saved = (await renders(id, who)).filter(r => r.clip_id !== PORTRAIT_CLIP);
+        const document = draftSchema.safeParse(JSON.parse(row.document));
+        const refAssets = await assets(id, who);
+        const refUrls = refAssets.filter(a => a.purpose === "reference").map(a => a.url);
+        const inputImages = (refUrls.length ? refUrls : row.image_url ? [row.image_url] : []).filter((url, i, all) => all.indexOf(url) === i).slice(0, 4);
         for (const render of saved
           .filter((r) => r.status === "queued" && r.provider_id)
           .slice(0, 4)) {
@@ -121,12 +125,11 @@ async function handle(req: Request) {
           }
         }
         return json({
-          renders: saved.map(({ id, clip_id, status, video_url }) => ({
-            id,
-            clip_id,
-            status,
-            video_url,
-          })),
+          renders: saved.map(r => {
+            const clip = document.success ? document.data.show.clips.find(c => c.id === r.clip_id) : undefined;
+            const current = !!clip && (r.fingerprint === digest(JSON.stringify({ clip, images: inputImages, face: row.face_id, provider: r.provider })) || (r.provider !== "higgsfield" && r.fingerprint === digest(JSON.stringify({ clip, images: inputImages, face: row.face_id }))));
+            return { id: r.id, clip_id: r.clip_id, status: r.status, video_url: r.video_url, current };
+          }),
         });
       }
       if (setting("HER_LAUNCHPAD_VIDEOS_ENABLED") !== "true")
@@ -182,7 +185,7 @@ async function handle(req: Request) {
         (r) => r.clip_id === clip.id && r.fingerprint === fingerprint,
       );
       if (existing) return json({ id: existing.id, status: existing.status });
-      await takeQuota(`video:${who}`, 20);
+      await takeQuota(`video:${who}`, 80);
       const render = {
         id: crypto.randomUUID(),
         character_id: id,

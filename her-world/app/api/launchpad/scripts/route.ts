@@ -43,7 +43,7 @@ export async function POST(req: Request) {
       const draft = draftSchema.parse(JSON.parse(row.document));
       if (!draft.rightsConfirmed)
         throw new Error("Confirm character rights first.");
-      await takeQuota(`script:${who}`, 40);
+      await takeQuota(`script:${who}`, 100);
       const messages = body.messages.filter(
         (m) => m.at >= Date.now() - 120000 && m.at <= Date.now() + 10000,
       );

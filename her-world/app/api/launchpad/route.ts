@@ -183,7 +183,7 @@ async function post(req: Request) {
     );
   const who = await owner(req),
     raw = await req.text();
-  if (raw.length > 26000) return json({ error: "Request too large." }, 413);
+  if (raw.length > 100000) return json({ error: "Request too large." }, 413);
   const body = JSON.parse(raw),
     act = action(req);
   if (act === "save") {

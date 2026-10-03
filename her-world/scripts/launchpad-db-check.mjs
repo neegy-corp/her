@@ -126,6 +126,11 @@ await withDatabase(process.env.DATABASE_URL, async () => {
     owner,
   );
   assert.equal((await store.ownedDraft(draft.id, owner)).image_url, null);
+  const longShow = { ...edited, show: { ...edited.show, continuous: true, bufferMinutes: 10,
+    clips: Array.from({ length: 40 }, () => ({ ...edited.show.clips[0], id: crypto.randomUUID(), duration: 15, direction: 'Camera direction. '.repeat(35) })) } };
+  assert.ok(JSON.stringify(longShow).length > 24000);
+  await store.saveDraft(longShow, owner);
+  assert.equal(JSON.parse((await store.ownedDraft(draft.id, owner)).document).show.clips.length, 40);
   await assert.rejects(() =>
     store.saveDraft(
       { ...edited, coinPfp: "https://example.com/not-owned.png" },
@@ -138,6 +143,7 @@ await withDatabase(process.env.DATABASE_URL, async () => {
       fixture: draft.id,
       checks: [
         "durable draft read/write",
+        "ten-minute 40-scene document through the deployed gateway",
         "cross-owner read/write denied",
         "atomic duplicate render claim",
         "cross-owner renders denied",

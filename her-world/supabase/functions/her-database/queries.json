@@ -30,6 +30,7 @@
   "SELECT * FROM her_private.launchpad_characters WHERE id = ? AND wallet = ?",
   "SELECT * FROM her_private.launchpad_characters WHERE wallet = ? ORDER BY updated_at DESC LIMIT 30",
   "SELECT * FROM her_private.launchpad_coins WHERE id=? AND wallet=?",
+  "SELECT * FROM her_private.launchpad_renders WHERE character_id=? AND wallet=? ORDER BY created_at DESC LIMIT 150",
   "SELECT * FROM her_private.launchpad_renders WHERE character_id=? AND wallet=? ORDER BY created_at DESC LIMIT 30",
   "SELECT * FROM her_private.operator_orders WHERE id = ? AND wallet = ?",
   "SELECT DISTINCT character FROM her_private.burn_receipts WHERE wallet = ? AND kind = 'character'",

@@ -49,6 +49,8 @@ const { creatorPath, readLocalDrafts, keepDraft } = await import("../lib/creator
 const scripts = await import("../app/api/launchpad/scripts/route.ts");
 const studio = await import("../app/api/launchpad/studio/route.ts");
 const { ShowRunner } = await import("../lib/show-runner.ts");
+const { ContinuousShowRunner } = await import("../lib/continuous-show.ts");
+const { measureMediaBuffer } = await import("../lib/media-buffer.ts");
 const { validateWhipEndpoint } = await import("../lib/whip-publisher.ts");
 const { normalizeChat } = await import("../lib/pump-chat.ts");
 const { scriptToClip, scriptMessages } = await import("../lib/acp-script.ts");
@@ -837,4 +839,68 @@ test("AI dialogue gets enough time to speak without clipping", () => {
   const scene={title:'Reply',script:'Ah RainCheck a good trench coat dark jeans and simple boots look great.',direction:'Look at camera.',duration:5};
   assert.equal(scriptToClip(scene,'reply').duration,10);
   assert.throws(()=>scriptToClip({...scene,script:Array(35).fill('a').join(' ')},'reply'),/too long/);
+});
+
+test("continuous show plays for ten minutes while two slow renders stay pending", async () => {
+  const plan={...defaultShow(),continuous:true,bufferMinutes:10,maxGenerations:3};
+  let played=0,requests=0; const releases=[];
+  const r=new ContinuousShowRunner('A',plan,{play:async()=>{played++;},reply:async()=>{throw new Error('not expected');},generate:async()=>{requests++;return new Promise(resolve=>releases.push(resolve));}});
+  r.start(plan.clips.map(c=>({id:c.id,url:'https://example.com/'+c.id+'.mp4'})));
+  for(let seconds=0;seconds<600;seconds+=5)await r.tick(seconds*1000);
+  assert.equal(played,120);assert.equal(requests,2);assert.equal(r.state.phase,'playing');assert.equal(r.replaying,true);
+  releases[0]({id:'new-scene',url:'https://example.com/new.mp4'});await new Promise(resolve=>setImmediate(resolve));
+  await r.tick(600001);assert.equal(r.state.activeClip,null);assert.equal(r.replaying,false);r.stop();
+  releases[1]({id:'late',url:'https://example.com/late.mp4'});await new Promise(resolve=>setImmediate(resolve));assert.equal(r.state.phase,'stopped');assert.equal(r.buffered,0);
+});
+
+test("continuous chat is claimed once and ready replies play at clip boundaries", async () => {
+  const plan={...defaultShow(),continuous:true,maxGenerations:2};let finishPlay,finishReply,replies=0;const played=[];
+  const r=new ContinuousShowRunner('A',plan,{play:async c=>{played.push(c.id);if(played.length===1)await new Promise(resolve=>finishPlay=resolve);},reply:async()=>{replies++;return new Promise(resolve=>finishReply=resolve);},generate:async()=>new Promise(()=>{})});
+  r.start(plan.clips.map(c=>({id:c.id,url:'https://example.com/a.mp4'})));
+  r.receive('A',{id:'chat-1',author:'Sam',text:'Hello',at:Date.now()});
+  const playing=r.tick();await new Promise(resolve=>setImmediate(resolve));await r.tick();assert.equal(replies,1);assert.equal(played.length,1);
+  finishReply({id:'reply-1',url:'https://example.com/reply.mp4'});await new Promise(resolve=>setImmediate(resolve));assert.equal(played.length,1);
+  finishPlay();await playing;await r.tick();assert.equal(played[1],'reply-1');assert.equal(replies,1);r.stop();
+});
+
+test("generation failure or budget exhaustion never stops continuous playback or retries paid jobs", async () => {
+  const plan={...defaultShow(),continuous:true,maxGenerations:1};let requests=0,plays=0;
+  const r=new ContinuousShowRunner('A',plan,{play:async()=>{plays++;},reply:async()=>{throw new Error('unused');},generate:async()=>{requests++;throw new Error('Ambiguous provider timeout');}});
+  r.start(plan.clips.map(c=>({id:c.id,url:'https://example.com/a.mp4'})));
+  await r.tick();await new Promise(resolve=>setImmediate(resolve));for(let n=0;n<20;n++)await r.tick();
+  assert.equal(requests,1);assert.equal(plays,21);assert.equal(r.generationPaused,true);assert.equal(r.state.phase,'playing');r.stop();
+});
+
+test("continuous coins have isolated generation queues and stop controls", async()=>{
+  const plan={...defaultShow(),continuous:true,maxGenerations:0};let playsA=0,playsB=0;
+  const driver=fn=>({play:async()=>fn(),reply:async()=>{throw new Error('unused')},generate:async()=>{throw new Error('unused')}});
+  const a=new ContinuousShowRunner('A',plan,driver(()=>playsA++)),b=new ContinuousShowRunner('B',plan,driver(()=>playsB++));
+  const clips=plan.clips.map(c=>({id:c.id,url:'https://example.com/a.mp4'}));a.start(clips);b.start(clips);a.stop();
+  await Promise.all([a.tick(),b.tick()]);assert.equal(playsA,0);assert.equal(playsB,1);b.stop();
+});
+
+test("continuous broadcast requires a complete five or ten minute plan",()=>{
+  const endpoint='https://pump-prod-test.whip.livekit.cloud/w';
+  const show={...defaultShow(),continuous:true,bufferMinutes:5,clips:Array.from({length:20},(_,n)=>({...defaultShow().clips[0],id:`scene-${n}`,duration:15}))};
+  const manifest={name:'Fixture',mint:'So11111111111111111111111111111111111111112',ready:true,show,clips:show.clips.map(c=>({id:c.id,url:`https://example.com/${c.id}.mp4`}))};
+  assert.doesNotThrow(()=>broadcastPreflight(manifest,endpoint,'test-key'));
+  assert.throws(()=>broadcastPreflight({...manifest,show:{...show,bufferMinutes:10}},endpoint,'test-key'),/10 minutes/);
+  assert.throws(()=>broadcastPreflight({...manifest,show:{...show,clips:show.clips.slice(1)}},endpoint,'test-key'),/5 minutes/);
+});
+
+test("buffer verification measures actual media, rejects bad media and cancels before publication",async()=>{
+  const original=globalThis.document; let active=0,peak=0;
+  class Video extends EventTarget {
+    src=''; duration=0;
+    removeAttribute(){this.src='';}
+    load(){if(!this.src)return;const src=this.src;active++;peak=Math.max(peak,active);setImmediate(()=>{active--;this.duration=src.includes('short')?5:15;this.dispatchEvent(new Event(src.includes('bad')?'error':'loadedmetadata'));});}
+  }
+  globalThis.document={createElement:()=>new Video()};
+  try {
+    const clips=Array.from({length:20},(_,i)=>({id:String(i),url:`https://example.com/${i?'normal':'short'}.mp4`,duration:15}));
+    assert.equal(await measureMediaBuffer(clips,new AbortController().signal),290);
+    assert.ok(peak<=4);
+    await assert.rejects(measureMediaBuffer([{id:'bad',url:'https://example.com/bad'}],new AbortController().signal),/could not be checked/);
+    const stop=new AbortController();stop.abort();await assert.rejects(measureMediaBuffer(clips,stop.signal),/Stopped/);
+  } finally {if(original===undefined)delete globalThis.document;else globalThis.document=original;}
 });

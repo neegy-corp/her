@@ -1,6 +1,9 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { ShowRunner, type RenderedClip } from "@/lib/show-runner";
+import { ContinuousShowRunner } from "@/lib/continuous-show";
+import { measureMediaBuffer } from "@/lib/media-buffer";
+import { preparedSeconds } from "@/lib/show";
 import { WhipPublisher } from "@/lib/whip-publisher";
 import { openPumpChat } from "@/lib/pump-chat";
 import type { ChatMessage, ShowClip, ShowPlan } from "@/lib/show";
@@ -61,7 +64,7 @@ function Studio({ id }: { id: string }) {
     [loading, setLoading] = useState(false),
     [layout, setLayout] = useState("portrait");
   const canvas = useRef<HTMLCanvasElement>(null);
-  const runner = useRef<ShowRunner | null>(null),
+  const runner = useRef<ShowRunner | ContinuousShowRunner | null>(null),
     publisher = useRef(new WhipPublisher());
   const cleanup = useRef<(() => void) | null>(null),
     stream = useRef<MediaStream | null>(null);
@@ -123,15 +126,17 @@ function Studio({ id }: { id: string }) {
     return () => window.removeEventListener("beforeunload", warn);
   }, [active, starting]);
   async function renderResponse(
-    mode: "reply" | "recommendation",
+    mode: "script" | "reply" | "recommendation",
     messages: ChatMessage[],
     signal: AbortSignal,
+    context?: { sequence: number; recentScripts: string[] },
   ) {
     const { clip } = await api<{ clip: ShowClip }>(
       "/scripts",
-      { id, mode, messages },
+      { id, mode, messages, brief: context ? `Continue this character's ongoing show, scene ${context.sequence}. No new introduction. Write a new 15-second moment, not a repeat of these earlier lines: ${context.recentScripts.join(" | ").slice(-750)}` : "" },
       signal,
     );
+    if (manifest?.show.continuous && mode === "script") { clip.duration = 15; clip.chatPause = 0; }
     const job = await api<{ id: string }>("/videos", { id, clip }, signal);
     const deadline = Date.now() + 15 * 60000;
     while (!signal.aborted && Date.now() < deadline) {
@@ -141,7 +146,7 @@ function Studio({ id }: { id: string }) {
       }>(`/videos?id=${encodeURIComponent(id)}`, undefined, signal);
       const result = renders.find((r) => r.id === job.id);
       if (result?.status === "ready" && result.video_url)
-        return { id: clip.id, url: result.video_url };
+        return { id: clip.id, url: result.video_url, duration: clip.duration, script: clip.script };
       if (result?.status === "failed")
         throw new Error(
           "Video generation failed. This job will not be submitted twice.",
@@ -160,6 +165,12 @@ function Studio({ id }: { id: string }) {
     setError("");
     try {
       if (goLive) broadcastPreflight(manifest, endpoint, key);
+      if (goLive && manifest.show.continuous) {
+        setHealth("Checking the actual duration of the prepared video buffer…");
+        const seconds = await measureMediaBuffer(manifest.clips, controller.signal);
+        if (seconds < (manifest.show.bufferMinutes || 5) * 60)
+          throw new Error(`Only ${Math.floor(seconds)} seconds of actual video are ready. Add scenes to reach the ${manifest.show.bufferMinutes || 5}-minute buffer.`);
+      }
       if (!navigator.locks)
         throw new Error(
           "Use a browser with Web Locks to prevent duplicate publishers.",
@@ -199,11 +210,13 @@ function Studio({ id }: { id: string }) {
           };
           cleanup.current = dispose;
           // A media element can only be attached to one Web Audio source. Create a fresh one on every start.
-          const element = document.createElement("video"),
-            surface = canvas.current!,
+          let element = document.createElement("video"), spare = document.createElement("video");
+          const surface = canvas.current!,
             ctx = surface.getContext("2d")!;
           element.crossOrigin = "anonymous";
           element.playsInline = true;
+          element.preload = "auto";
+          spare.crossOrigin = "anonymous"; spare.playsInline = true; spare.preload = "auto";
           surface.width = layout === "portrait" ? 720 : 1280;
           surface.height = layout === "portrait" ? 1280 : 720;
           const audio = new AudioContext();
@@ -211,15 +224,18 @@ function Studio({ id }: { id: string }) {
             element.pause();
             element.removeAttribute("src");
             element.load();
+            spare.pause(); spare.removeAttribute("src"); spare.load();
             void audio.close();
           });
           await audio.resume();
           if (disposed) return;
-          const audioSource = audio.createMediaElementSource(element),
+          const audioSource = audio.createMediaElementSource(element), spareAudio = audio.createMediaElementSource(spare),
             output = audio.createMediaStreamDestination();
           audioSource.connect(output);
           audioSource.connect(audio.destination);
+          spareAudio.connect(output); spareAudio.connect(audio.destination);
           disposeSteps.push(() => audioSource.disconnect());
+          disposeSteps.push(() => spareAudio.disconnect());
           ctx.fillStyle = "#143f32";
           ctx.fillRect(0, 0, surface.width, surface.height);
           ctx.fillStyle = "#f6f1e7";
@@ -256,10 +272,10 @@ function Studio({ id }: { id: string }) {
                   h,
                 );
                 ctx.fillStyle = "rgba(0,0,0,.48)";
-                ctx.fillRect(18, 18, 260, 34);
+                ctx.fillRect(18, 18, 430, 34);
                 ctx.fillStyle = "white";
                 ctx.font = "18px sans-serif";
-                ctx.fillText("ACP · AI-generated character", 28, 41);
+                ctx.fillText(runner.current instanceof ContinuousShowRunner && runner.current.replaying ? "ACP · Previously generated scene · Replay" : "ACP · AI-generated character", 28, 41);
               } catch {
                 if (!drawError) {
                   drawError = true;
@@ -279,20 +295,36 @@ function Studio({ id }: { id: string }) {
             .getAudioTracks()
             .forEach((track) => captured.addTrack(track));
           stream.current = captured;
-          const play = (clip: RenderedClip, signal: AbortSignal) =>
-            new Promise<void>((resolve, reject) => {
+          const play = async (clip: RenderedClip, signal: AbortSignal) => {
+            const candidate = spare;
+            if (candidate.src !== clip.url) { candidate.src = clip.url; candidate.load(); }
+            if (candidate.readyState < 3) await new Promise<void>((resolve, reject) => {
+              const clear = () => { clearTimeout(timeout); candidate.removeEventListener("canplay", ready); candidate.removeEventListener("error", failed); signal.removeEventListener("abort", cancelled); };
+              const ready = () => { clear(); resolve(); };
+              const failed = () => { clear(); reject(new Error("Next clip could not be buffered. Trying the next scene.")); };
+              const cancelled = () => { clear(); reject(new Error("Stopped.")); };
+              const timeout = setTimeout(failed, 20000);
+              candidate.addEventListener("canplay", ready, { once: true }); candidate.addEventListener("error", failed, { once: true }); signal.addEventListener("abort", cancelled, { once: true });
+              if (signal.aborted) cancelled();
+            });
+            if (signal.aborted) throw new Error("Stopped.");
+            element.pause(); spare = element; element = candidate; element.currentTime = 0;
+            const playing = element;
+            const next = runner.current instanceof ContinuousShowRunner ? runner.current.nextClip : null;
+            if (next && spare.src !== next.url) { spare.src = next.url; spare.load(); }
+            return new Promise<void>((resolve, reject) => {
               let lastTime = -1,
                 progressed = Date.now();
               const watchdog = setInterval(() => {
-                if (element.currentTime !== lastTime) {
-                  lastTime = element.currentTime;
+                if (playing.currentTime !== lastTime) {
+                  lastTime = playing.currentTime;
                   progressed = Date.now();
                 } else if (Date.now() - progressed > 20000) failed();
               }, 1000);
               const clear = () => {
                 clearInterval(watchdog);
-                element.removeEventListener("ended", ended);
-                element.removeEventListener("error", failed);
+                playing.removeEventListener("ended", ended);
+                playing.removeEventListener("error", failed);
                 signal.removeEventListener("abort", cancelled);
               };
               const ended = () => {
@@ -309,20 +341,19 @@ function Studio({ id }: { id: string }) {
               };
               const cancelled = () => {
                 clear();
-                element.pause();
+                playing.pause();
                 reject(new Error("Stopped."));
               };
-              element.addEventListener("ended", ended, { once: true });
-              element.addEventListener("error", failed, { once: true });
+              playing.addEventListener("ended", ended, { once: true });
+              playing.addEventListener("error", failed, { once: true });
               signal.addEventListener("abort", cancelled, { once: true });
               if (signal.aborted) {
                 cancelled();
                 return;
               }
-              element.src = clip.url;
-              element.load();
-              void element.play().catch(failed);
+              void playing.play().catch(failed);
             });
+          };
           if (goLive) {
             setPublishing(true);
             setHealth("Connecting to pump.fun…");
@@ -340,12 +371,13 @@ function Studio({ id }: { id: string }) {
               "Stream connection accepted. Checking video and audio output…",
             );
           }
-          const current = new ShowRunner(manifest.mint || id, manifest.show, {
+          const Runner = manifest.show.continuous ? ContinuousShowRunner : ShowRunner;
+          const current = new Runner(manifest.mint || id, manifest.show, {
             play,
             reply: (message, signal) =>
               renderResponse("reply", [message], signal),
-            generate: (messages, signal) =>
-              renderResponse("recommendation", messages, signal),
+            generate: (messages, signal, context) =>
+              renderResponse(messages.length ? "recommendation" : "script", messages, signal, context),
           });
           current.start(manifest.clips);
           disposeSteps.push(() => current.stop());
@@ -359,10 +391,11 @@ function Studio({ id }: { id: string }) {
             : () => undefined;
           disposeSteps.push(stopChat);
           if (!manifest.mint) setChat("No deployed coin; rehearsal only");
-          const timer = setInterval(() => {
+          const advance = () => {
+            const wasBusy = current.busy;
             void current.tick().then(() => {
               if (disposed) return;
-              setPhase(current.state.phase);
+              setPhase(current instanceof ContinuousShowRunner ? `${current.replaying ? "replaying" : "playing"} · ${current.buffered} queued · ${current.rendering} rendering · ${current.submitted}/${manifest.show.maxGenerations} new renders used${current.generationPaused ? " · generation paused after an error" : ""}` : current.state.phase);
               if (current.error) setError(current.error);
               if (current.state.phase === "stopped") {
                 dispose();
@@ -371,8 +404,10 @@ function Studio({ id }: { id: string }) {
                 setConnected(false);
                 setHealth("Show stopped. Broadcast disconnected.");
               }
+              if (!wasBusy && current instanceof ContinuousShowRunner && !current.busy && !disposed) setTimeout(() => { if (!disposed) advance(); }, 0);
             });
-          }, 500);
+          };
+          const timer = setInterval(advance, 500);
           disposeSteps.push(() => clearInterval(timer));
           const stats = setInterval(() => {
             void publisher.current
@@ -435,6 +470,13 @@ function Studio({ id }: { id: string }) {
     setError("");
     try {
       broadcastPreflight(manifest, endpoint, key);
+      if (manifest.show.continuous) {
+        if (!expectedSession) throw new Error("Start the show before publishing.");
+        setHealth("Checking the actual duration of the prepared video buffer…");
+        const seconds = await measureMediaBuffer(manifest.clips, expectedSession.signal);
+        if (seconds < (manifest.show.bufferMinutes || 5) * 60)
+          throw new Error(`Only ${Math.floor(seconds)} seconds of actual video are ready. Prepare the full buffer before publishing.`);
+      }
       await publisher.current.start(
         stream.current,
         endpoint.trim(),
@@ -475,6 +517,7 @@ function Studio({ id }: { id: string }) {
   const canPublish =
     !!manifest?.ready &&
     !!manifest?.mint &&
+    (!manifest.show.continuous || preparedSeconds(manifest.show) >= (manifest.show.bufferMinutes || 5) * 60) &&
     !!endpoint.trim() &&
     !!key.trim() &&
     !starting &&
@@ -531,6 +574,7 @@ function Studio({ id }: { id: string }) {
               <span>Chat: {chat}</span>
             </div>
             <p className="acp-stream-health">{health}</p>
+            {manifest?.show.continuous && <p className="lp-field-note">Continuous mode · no shutdown timer. New renders use the saved generation limit. If generation falls behind, prepared clips replay with a visible label.</p>}
           </div>
           <section className="acp-stream-setup">
             <span className="lp-kicker">CONNECT YOUR PUMP.FUN STREAM</span>
@@ -553,7 +597,7 @@ function Studio({ id }: { id: string }) {
                   {loading
                     ? "Loading your show…"
                     : manifest?.ready
-                      ? `${manifest.clips.length} scenes ready`
+                      ? `${manifest.clips.length} scenes ready${manifest.show.continuous ? ` · ${preparedSeconds(manifest.show)} / ${(manifest.show.bufferMinutes || 5) * 60} planned buffer seconds` : ""}`
                       : "Generate the current scenes before going live."}
                 </span>
                 <button

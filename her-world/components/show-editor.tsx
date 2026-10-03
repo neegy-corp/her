@@ -14,6 +14,7 @@ import {
 import type { CharacterDraft } from "@/lib/launchpad";
 import type { ShowPlan, ShowClip } from "@/lib/show";
 import { REFERENCE_LIMIT } from "@/lib/acp-config";
+import ContinuousProgram from "./continuous-program";
 type RefPhoto = { id: string; name: string; file: Blob };
 type Render = {
   id: string;
@@ -79,6 +80,7 @@ export default function ShowEditor({
     [error, setError] = useState(""),
     [renders, setRenders] = useState<Render[]>([]),
     [preview, setPreview] = useState("");
+  const [preparing, setPreparing] = useState(false);
   const show = draft.show;
   useEffect(
     () => () => photos.forEach((photo) => URL.revokeObjectURL(photo.url)),
@@ -211,8 +213,8 @@ export default function ShowEditor({
     }
   }
   async function writeScene() {
-    if (show.clips.length >= 8) {
-      setError("This show already has eight scenes.");
+    if (show.clips.length >= 48) {
+      setError("This show already has 48 scenes.");
       return;
     }
     setBusy("script");
@@ -250,6 +252,8 @@ export default function ShowEditor({
   }
   return (
     <div className="lp-show">
+      <ContinuousProgram draft={draft} onChange={onChange} onBusy={setPreparing} />
+      <fieldset disabled={preparing} style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
       <div className="lp-form-heading">
         <div>
           <span className="lp-kicker">
@@ -261,7 +265,7 @@ export default function ShowEditor({
       </div>
       <button
         className="lp-secondary"
-        disabled={!!busy || show.clips.length >= 8}
+        disabled={!!busy || show.clips.length >= 48}
         onClick={() => void writeScene()}
       >
         {busy === "script" ? "Writing scene…" : "Write a scene with AI"}
@@ -431,7 +435,7 @@ export default function ShowEditor({
       ))}
       <button
         className="lp-add-scene"
-        disabled={show.clips.length >= 8}
+        disabled={show.clips.length >= 48}
         onClick={() =>
           onChange({
             ...show,
@@ -450,7 +454,7 @@ export default function ShowEditor({
           })
         }
       >
-        <Plus size={16} /> Add scene <span>{show.clips.length}/8</span>
+        <Plus size={16} /> Add scene <span>{show.clips.length}/48</span>
       </button>
       <div className="lp-generative">
         <label className="lp-check">
@@ -462,10 +466,9 @@ export default function ShowEditor({
             }
           />
           <span>
-            <strong>Let chat write the next chapter.</strong>
+            <strong>{show.continuous ? "Generate new scenes while streaming." : "Let chat write the next chapter."}</strong>
             <small>
-              After the script ends, collect suggestions and turn the strongest
-              ideas into the next scene. One video at a time.
+              {show.continuous ? "Keep writing fresh scenes when chat is quiet. Viewer replies play one at a time between clips. Two renders can prepare in the background." : "After the script ends, collect suggestions and turn the strongest ideas into the next scene. One video at a time."}
             </small>
           </span>
         </label>
@@ -545,6 +548,7 @@ export default function ShowEditor({
           {error}
         </p>
       )}
+      </fieldset>
     </div>
   );
 }

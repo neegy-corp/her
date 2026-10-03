@@ -1,5 +1,6 @@
 import { validateWhipEndpoint } from "./whip-publisher";
 import type { ShowPlan } from "./show";
+import { preparedSeconds } from "./show";
 import type { RenderedClip } from "./show-runner";
 export type StudioManifest = {
   name: string;
@@ -30,6 +31,8 @@ export function broadcastPreflight(
       "Generate every current scene, then refresh the show before going live.",
     );
   validateWhipEndpoint(endpoint.trim());
+  if (manifest.show.continuous && preparedSeconds(manifest.show) < (manifest.show.bufferMinutes || 5) * 60)
+    throw new Error(`Prepare ${manifest.show.bufferMinutes || 5} minutes of fresh video before going live.`);
   if (!key.trim()) throw new Error("Enter the stream key for this coin.");
   if (key.trim().length > 4096 || !/^[\x21-\x7e]+$/.test(key.trim()))
     throw new Error("The stream key has an invalid format.");

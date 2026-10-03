@@ -248,6 +248,13 @@ export type RenderRow = {
 };
 export async function renders(id: string, owner: string) {
   return (
+    await db().prepare("SELECT * FROM her_private.launchpad_renders WHERE character_id=? AND wallet=? ORDER BY created_at DESC LIMIT 150")
+      .bind(id, owner).all<RenderRow>()
+  ).results;
+}
+// Retain the earlier deployed query during rolling website deployments.
+export async function recentRenders(id: string, owner: string) {
+  return (
     await db()
       .prepare(
         "SELECT * FROM her_private.launchpad_renders WHERE character_id=? AND wallet=? ORDER BY created_at DESC LIMIT 30",
