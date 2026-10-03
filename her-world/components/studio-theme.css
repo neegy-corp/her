@@ -62,7 +62,7 @@ body:has(.lp.acp-pages){background:var(--background)}
 .lp.acp-pages .acp-footer-brand{display:flex;align-items:center;gap:10px}
 .lp.acp-pages .acp-footer-brand img{object-fit:contain}
 .brand-hero{position:relative;isolation:isolate;max-width:1440px;margin:auto;min-height:640px;overflow:hidden}
-.brand-hero-art{position:absolute;inset:0;width:100%;max-width:none;height:100%;object-fit:contain;object-position:right center;pointer-events:none;z-index:0}
+.brand-hero-art{position:absolute;top:50%;right:0;width:min(100%,1137px);height:auto;transform:translateY(-50%);object-fit:contain;object-position:right center;pointer-events:none;z-index:0;mask-image:linear-gradient(90deg,transparent,#000 16%,#000 94%,transparent),linear-gradient(180deg,transparent,#000 4%,#000 84%,transparent);mask-composite:intersect;-webkit-mask-composite:source-in}
 .brand-hero-inner{max-width:1240px;margin:auto;position:relative;z-index:1;padding:112px 40px 95px}
 .brand-hero-copy{max-width:580px}
 .lp.acp-pages .brand-hero h1{font-size:clamp(56px,6vw,78px);font-weight:600;line-height:1.04;letter-spacing:-.038em;margin:0 0 28px;text-wrap:balance}
@@ -104,13 +104,13 @@ body:has(.lp.acp-pages){background:var(--background)}
 .lp.acp-pages .lp-pfp-upload input[type=file]{font-size:12px;padding:6px;min-height:42px}
 .lp.acp-pages .lp-pfp-upload input[type=file]::file-selector-button{border:0;border-radius:6px;padding:7px 10px;margin-right:9px;background:var(--secondary);color:var(--foreground);font:inherit;cursor:pointer}
 @media(max-width:1000px){
-  .brand-hero-inner{padding:98px 30px 80px}.brand-hero{min-height:610px}.brand-hero-art{object-position:right center}
+  .brand-hero-inner{padding:98px 30px 80px}.brand-hero{min-height:610px}.brand-hero-art{width:min(100%,1084px)}
   .brand-workspace{padding:75px 30px 85px;gap:7%;grid-template-columns:.8fr 1.2fr}
   .brand-discovery{margin:0 30px 70px}.acp-studio-heading .acp-heading-art{right:15%;width:190px;height:190px}
 }
 @media(max-width:780px){
   .brand-hero{min-height:0;padding-bottom:330px}.brand-hero-inner{padding:46px 22px 0}
-  .brand-hero-art{inset:auto 0 -30px auto;width:100%;height:390px;object-fit:cover;object-position:85% center}
+  .brand-hero-art{inset:auto 0 -30px auto;width:100%;height:390px;transform:none;object-fit:cover;object-position:85% center;mask-image:linear-gradient(90deg,transparent,#000 10%,#000 98%,transparent),linear-gradient(180deg,transparent,#000 4%,#000 84%,transparent calc(100% - 30px))}
   .lp.acp-pages .brand-hero h1{font-size:clamp(46px,8.5vw,64px);line-height:1.06;letter-spacing:-.035em;margin-bottom:22px}
   .brand-hero-copy>p{font-size:15px;max-width:355px}.brand-hero .creator-hero-actions{margin-top:25px}
   .brand-workspace{grid-template-columns:1fr;gap:32px;padding:45px 22px 65px}.brand-workspace-copy p{max-width:440px}

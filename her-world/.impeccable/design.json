@@ -572,6 +572,11 @@
         "name": "The Tonal Depth Rule",
         "body": "Use tone and fine borders for stationary work surfaces. Reserve the existing library elevation for option menus and the physical shading for raster imagery.",
         "section": "elevation"
+      },
+      {
+        "name": "The Hero Boundary Rule",
+        "body": "Feather the homepage hero's actual raster bounds into the charcoal canvas with intersecting horizontal and vertical alpha ramps. Keep the sculpture opaque. In the stacked cover crop, complete the bottom fade before the image's 30px clipped offset.",
+        "section": "layout"
       }
     ],
     "dos": [
