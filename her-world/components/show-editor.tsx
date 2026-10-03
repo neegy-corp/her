@@ -442,7 +442,7 @@ export default function ShowEditor({
           <span>
             <strong>{show.continuous ? "Generate new scenes while streaming." : "Let chat write the next chapter."}</strong>
             <small>
-              {show.continuous ? "New scenes use the limit below. Replies play between clips." : "After the script ends, collect suggestions and turn the strongest ideas into the next scene. One video at a time."}
+              {show.continuous ? "Recent chat becomes new scenes between clips. Quiet chat continues the story, leaving a render slot for viewers." : "After the script ends, collect suggestions and turn the strongest ideas into the next scene. One video at a time."}
             </small>
           </span>
         </label>

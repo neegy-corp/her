@@ -17,6 +17,8 @@ export class ContinuousShowRunner {
   private replayIndex = 0;
   private claimed = new Set<string>();
   private history: string[] = [];
+  private chatSince: number | null = null;
+  private nextBackgroundAt = 0;
   constructor(readonly mint: string, readonly plan: ShowPlan, private driver: ShowDriver) {}
   get buffered() { return this.queue.length + this.replies.length; }
   get nextClip() { return this.replies[0] || this.queue[0] || this.library[this.replayIndex % this.library.length]; }
@@ -31,31 +33,40 @@ export class ContinuousShowRunner {
     this.state = { ...initialShow(), phase: "playing" };
     this.replies = []; this.claimed.clear(); this.submitted = 0; this.rendering = 0;
     this.replayIndex = 0;
+    this.chatSince = null; this.nextBackgroundAt = 0;
     this.busy = false; this.replaying = false; this.generationPaused = false; this.error = "";
   }
   receive(mint: string, message: ChatMessage, now = Date.now()) {
-    if (mint === this.mint && this.state.phase !== "stopped") this.state = queueChat(this.state, message, now);
+    if (mint !== this.mint || this.state.phase === "stopped") return;
+    this.state = { ...this.state, messages: this.state.messages.filter(m => m.at >= now - 120000 && !this.claimed.has(m.id)) };
+    if (!this.state.messages.length) this.chatSince = null;
+    this.state = queueChat(this.state, message, now);
+    if (this.state.messages.length && this.chatSince === null) this.chatSince = now;
   }
   stop() { this.abort.abort(); this.state = initialShow(); this.queue = []; this.replies = []; }
   private fill(now: number) {
     const signal = this.abort.signal;
     if (signal.aborted || !this.plan.generative || this.generationPaused) return;
-    // Two provider requests maximum; the saved per-show cap includes failed/ambiguous requests.
-    while (this.rendering < 2 && this.submitted < this.plan.maxGenerations) {
+    // Batch audience ideas; claim before the paid request so overlapping ticks cannot reuse them.
+    if (this.rendering < 2 && this.submitted < this.plan.maxGenerations) {
       const fresh = this.state.messages.filter(m => m.at >= now - 120000 && !this.claimed.has(m.id));
-      const message = fresh[0];
-      if (!message && this.queue.length + this.rendering >= this.plan.clips.length + 2) break;
-      if (message) this.claimed.add(message.id);
+      if (fresh.length && (this.chatSince === null || now < this.chatSince + this.plan.chatWindow * 1000)) return;
+      // Keep one slot available for audience ideas, and pace quiet-chat continuations.
+      if (!fresh.length && (this.rendering > 0 || now < this.nextBackgroundAt || this.queue.length >= this.plan.clips.length + 2)) return;
+      for (const message of fresh) this.claimed.add(message.id);
+      this.state = { ...this.state, messages: [] };
+      this.chatSince = null;
+      this.nextBackgroundAt = now + this.plan.chatWindow * 1000;
       if (this.claimed.size > 1000) this.claimed = new Set([...this.claimed].slice(-500));
       this.submitted++; this.rendering++;
       const sequence = this.submitted;
       const work = Promise.resolve().then(() => {
         if (signal.aborted) throw new Error("Stopped.");
-        return message ? this.driver.reply(message, signal) : this.driver.generate([], signal, { sequence, recentScripts: [...this.history] });
+        return this.driver.generate(fresh, signal, { sequence, recentScripts: [...this.history] });
       });
       void work.then(clip => {
         if (signal.aborted) return;
-        if (message) this.replies.push(clip); else this.queue.push(clip);
+        if (fresh.length) this.replies.push(clip); else this.queue.push(clip);
         this.library.push(clip); this.library = this.library.slice(-48);
         if (clip.script) this.history = [...this.history, clip.script].slice(-6);
         this.state = { ...this.state, generated: this.state.generated + 1 };
