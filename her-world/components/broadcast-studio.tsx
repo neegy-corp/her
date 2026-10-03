@@ -5,13 +5,14 @@ import { WhipPublisher } from "@/lib/whip-publisher";
 import { openPumpChat } from "@/lib/pump-chat";
 import type { ChatMessage, ShowClip, ShowPlan } from "@/lib/show";
 import "./launchpad.css";
-type Manifest = {
-  name: string;
-  mint: string | null;
-  ready: boolean;
-  show: ShowPlan;
-  clips: RenderedClip[];
-};
+import { WalletRoot, useWallet } from "./wallet";
+import {
+  broadcastPreflight,
+  type StudioManifest as Manifest,
+} from "@/lib/broadcast-plan";
+import { AcpNav, AcpFooter } from "./acp-nav";
+import "./acp-pages.css";
+import "./broadcast-studio.css";
 async function api<T>(
   path: string,
   body?: unknown,
@@ -46,6 +47,19 @@ function delay(signal: AbortSignal) {
   });
 }
 export default function BroadcastStudio({ id }: { id: string }) {
+  return (
+    <WalletRoot>
+      <Studio id={id} />
+    </WalletRoot>
+  );
+}
+function Studio({ id }: { id: string }) {
+  const { viewer, connect } = useWallet();
+  const sessionAbort = useRef<AbortController | null>(null);
+  const stopping = useRef(false);
+  const [revision, setRevision] = useState(0),
+    [loading, setLoading] = useState(false),
+    [layout, setLayout] = useState("portrait");
   const canvas = useRef<HTMLCanvasElement>(null);
   const runner = useRef<ShowRunner | null>(null),
     publisher = useRef(new WhipPublisher());
@@ -61,26 +75,53 @@ export default function BroadcastStudio({ id }: { id: string }) {
   const [endpoint, setEndpoint] = useState(""),
     [key, setKey] = useState(""),
     [publishing, setPublishing] = useState(false),
+    [connected, setConnected] = useState(false),
     [health, setHealth] = useState("Not publishing");
   useEffect(() => {
     alive.current = true;
     const controller = new AbortController();
+    setManifest(null);
+    if (!viewer.wallet)
+      return () => {
+        alive.current = false;
+      };
+    setLoading(true);
+    setError("");
     api<Manifest>(
       `/studio?id=${encodeURIComponent(id)}`,
       undefined,
       controller.signal,
     )
-      .then(setManifest)
+      .then((value) => {
+        if (!controller.signal.aborted) setManifest(value);
+      })
       .catch((e) => {
         if (!controller.signal.aborted) setError(e.message);
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLoading(false);
       });
     return () => {
       alive.current = false;
       controller.abort();
+      sessionAbort.current?.abort();
       cleanup.current?.();
+      setActive(false);
+      setConnected(false);
+      setKey("");
       void publisher.current.stop();
     };
-  }, [id]);
+  }, [id, viewer.wallet, revision]);
+  useEffect(() => {
+    const warn = (event: BeforeUnloadEvent) => {
+      if (active || starting) {
+        event.preventDefault();
+        event.returnValue = "";
+      }
+    };
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [active, starting]);
   async function renderResponse(
     mode: "reply" | "recommendation",
     messages: ChatMessage[],
@@ -110,11 +151,15 @@ export default function BroadcastStudio({ id }: { id: string }) {
       "Render still pending. Check saved jobs; no duplicate was submitted.",
     );
   }
-  async function start() {
-    if (!manifest?.ready || starting || active) return;
+  async function start(goLive = false) {
+    if (!manifest?.ready || sessionAbort.current || active || stopping.current)
+      return;
+    const controller = new AbortController();
+    sessionAbort.current = controller;
     setStarting(true);
     setError("");
     try {
+      if (goLive) broadcastPreflight(manifest, endpoint, key);
       if (!navigator.locks)
         throw new Error(
           "Use a browser with Web Locks to prevent duplicate publishers.",
@@ -124,7 +169,7 @@ export default function BroadcastStudio({ id }: { id: string }) {
         `acp-show-${id}`,
         { ifAvailable: true },
         async (lock) => {
-          if (!alive.current) return;
+          if (!alive.current || controller.signal.aborted) return;
           if (!lock)
             throw new Error(
               "This character is already running in another tab.",
@@ -146,6 +191,9 @@ export default function BroadcastStudio({ id }: { id: string }) {
               }
             }
             stream.current = null;
+            if (sessionAbort.current === controller)
+              sessionAbort.current = null;
+            controller.abort();
             if (cleanup.current === dispose) cleanup.current = null;
             release();
           };
@@ -156,6 +204,8 @@ export default function BroadcastStudio({ id }: { id: string }) {
             ctx = surface.getContext("2d")!;
           element.crossOrigin = "anonymous";
           element.playsInline = true;
+          surface.width = layout === "portrait" ? 720 : 1280;
+          surface.height = layout === "portrait" ? 1280 : 720;
           const audio = new AudioContext();
           disposeSteps.push(() => {
             element.pause();
@@ -179,8 +229,20 @@ export default function BroadcastStudio({ id }: { id: string }) {
           const draw = setInterval(() => {
             if (element.readyState >= 2) {
               try {
-                // Cover the output with the current video; retain the last frame during generation.
-                const scale = Math.max(
+                // Fill the backdrop, then contain the clip so portraits and gestures are never cropped.
+                ctx.fillStyle = "#143f32";
+                ctx.fillRect(0, 0, surface.width, surface.height);
+                ctx.save();
+                ctx.filter = "blur(26px) brightness(.5)";
+                ctx.drawImage(
+                  element,
+                  -30,
+                  -30,
+                  surface.width + 60,
+                  surface.height + 60,
+                );
+                ctx.restore();
+                const scale = Math.min(
                   surface.width / element.videoWidth,
                   surface.height / element.videoHeight,
                 );
@@ -261,6 +323,23 @@ export default function BroadcastStudio({ id }: { id: string }) {
               element.load();
               void element.play().catch(failed);
             });
+          if (goLive) {
+            setPublishing(true);
+            setHealth("Connecting to pump.fun…");
+            await publisher.current.start(
+              captured,
+              endpoint.trim(),
+              key.trim(),
+              controller.signal,
+            );
+            if (disposed || controller.signal.aborted) return;
+            setConnected(true);
+            setPublishing(false);
+            setKey("");
+            setHealth(
+              "Stream connection accepted. Checking video and audio output…",
+            );
+          }
           const current = new ShowRunner(manifest.mint || id, manifest.show, {
             play,
             reply: (message, signal) =>
@@ -282,19 +361,38 @@ export default function BroadcastStudio({ id }: { id: string }) {
           if (!manifest.mint) setChat("No deployed coin; rehearsal only");
           const timer = setInterval(() => {
             void current.tick().then(() => {
+              if (disposed) return;
               setPhase(current.state.phase);
               if (current.error) setError(current.error);
+              if (current.state.phase === "stopped") {
+                dispose();
+                void publisher.current.stop();
+                setActive(false);
+                setConnected(false);
+                setHealth("Show stopped. Broadcast disconnected.");
+              }
             });
           }, 500);
           disposeSteps.push(() => clearInterval(timer));
           const stats = setInterval(() => {
             void publisher.current
               .health()
-              .then((h) =>
+              .then((h) => {
+                if (disposed) return;
                 setHealth(
-                  `${h.state} · ${Math.round(h.kbps)} kbps · ${h.advancingFrames ? "frames advancing" : "no fresh frame proof"}. Public playback unverified.`,
-                ),
-              );
+                  `${h.state} · ${Math.round(h.kbps)} kbps · ${h.advancingFrames ? "video frames advancing" : "waiting for video frames"}. Check public playback below.`,
+                );
+                if (["failed", "disconnected", "closed"].includes(h.state)) {
+                  setConnected(false);
+                  setError(
+                    "The stream connection was interrupted. Stop this show before reconnecting with the coin’s stream credentials.",
+                  );
+                }
+              })
+              .catch(() => {
+                if (!disposed)
+                  setError("Unable to read stream transport status.");
+              });
           }, 5000);
           disposeSteps.push(() => clearInterval(stats));
           setActive(true);
@@ -303,120 +401,278 @@ export default function BroadcastStudio({ id }: { id: string }) {
         },
       );
     } catch (e) {
-      cleanup.current?.();
-      setError(e instanceof Error ? e.message : "Studio unavailable.");
+      const cancelled = controller.signal.aborted;
+      if (sessionAbort.current === controller) {
+        cleanup.current?.();
+        sessionAbort.current = null;
+        await publisher.current.stop();
+      }
+      if (!sessionAbort.current || sessionAbort.current === controller) {
+        if (!cancelled)
+          setError(e instanceof Error ? e.message : "Studio unavailable.");
+        setActive(false);
+        setConnected(false);
+      }
     } finally {
-      setStarting(false);
+      if (!sessionAbort.current || sessionAbort.current === controller) {
+        setStarting(false);
+        setPublishing(false);
+        sessionAbort.current = null;
+      }
     }
   }
   async function publish() {
-    if (!stream.current || !manifest?.mint) return;
+    if (
+      !stream.current ||
+      !manifest?.mint ||
+      publishing ||
+      connected ||
+      stopping.current
+    )
+      return;
+    const expectedSession = sessionAbort.current;
     setPublishing(true);
     setError("");
     try {
-      await publisher.current.start(stream.current, endpoint, key);
+      broadcastPreflight(manifest, endpoint, key);
+      await publisher.current.start(
+        stream.current,
+        endpoint.trim(),
+        key.trim(),
+        sessionAbort.current?.signal,
+      );
+      if (!stream.current || sessionAbort.current?.signal.aborted) return;
+      setConnected(true);
       setKey("");
       setHealth(
         "WHIP accepted. Waiting for advancing output; public playback unverified.",
       );
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Publishing failed.");
+      if (
+        sessionAbort.current === expectedSession &&
+        !expectedSession?.signal.aborted
+      )
+        setError(e instanceof Error ? e.message : "Publishing failed.");
     } finally {
       setPublishing(false);
     }
   }
   async function stop() {
+    stopping.current = true;
+    sessionAbort.current?.abort();
     cleanup.current?.();
     await publisher.current.stop();
+    sessionAbort.current = null;
+    setKey("");
+    setStarting(false);
+    setPublishing(false);
+    setConnected(false);
     setActive(false);
     setPhase("stopped");
     setHealth("Not publishing");
+    stopping.current = false;
   }
+  const canPublish =
+    !!manifest?.ready &&
+    !!manifest?.mint &&
+    !!endpoint.trim() &&
+    !!key.trim() &&
+    !starting &&
+    !publishing &&
+    !connected;
   return (
-    <main className="lp lp-broadcast">
-      <a href="/">← ACP launchpad</a>
-      <h1>{manifest?.name || "Character"} studio</h1>
-      <p>
-        One tab per character. Keep this tab open. Cloud hosting is required for
-        unattended broadcasts.
-      </p>
-      <canvas
-        ref={canvas}
-        width={1280}
-        height={720}
-        aria-label="Character program output"
-      />
-      <p role="status">
-        Show: {phase} · Chat: {chat}
-      </p>
-      <p>{health}</p>
-      {error && <p role="alert">{error}</p>}
-      <button
-        className="lp-primary"
-        disabled={!manifest?.ready || active || starting}
-        onClick={() => void start()}
-      >
-        {starting ? "Starting…" : "Start rehearsal"}
-      </button>
-      <button
-        className="lp-secondary"
-        disabled={!active}
-        onClick={() => void stop()}
-      >
-        Stop show and broadcast
-      </button>
-      {manifest && !manifest.ready && (
-        <p>
-          Render every current scene first, then refresh this page. Old renders
-          from different scripts or reference images are excluded.
-        </p>
-      )}
-      <section>
-        <h2>Publish this coin’s show</h2>
-        <p>
-          {manifest?.mint
-            ? `Coin: ${manifest.mint}`
-            : "Deploy the coin with your wallet before publishing."}
-        </p>
-        <label>
-          WHIP endpoint
-          <input
-            value={endpoint}
-            onChange={(e) => setEndpoint(e.target.value)}
-            placeholder="https://pump-….whip.livekit.cloud/w"
-            autoComplete="off"
-          />
-        </label>
-        <label>
-          Stream key
-          <input
-            type="password"
-            value={key}
-            onChange={(e) => setKey(e.target.value)}
-            autoComplete="off"
-          />
-        </label>
-        <p>
-          Use this coin’s stream credentials. They stay in this tab’s memory and
-          are sent only to its Pump WHIP endpoint.
-        </p>
-        <button
-          className="lp-primary"
-          disabled={!active || !manifest?.mint || !key || publishing}
-          onClick={() => void publish()}
-        >
-          Publish to pump.fun
-        </button>
-        {manifest?.mint && (
-          <a
-            href={`https://pump.fun/coin/${manifest.mint}`}
-            target="_blank"
-            rel="noreferrer"
-          >
-            Check public playback ↗
+    <main className="lp acp-pages">
+      <AcpNav />
+      <div className="acp-live-shell">
+        <div className="acp-live-heading">
+          <div>
+            <span className="lp-kicker">YOUR CHARACTER / BROADCAST STUDIO</span>
+            <h1>
+              {manifest?.name || "Character"}
+              <em> on air.</em>
+            </h1>
+            <p>Play the show. Hear from chat. Let the next scene unfold.</p>
+          </div>
+          <a href="/create" className="lp-text-link">
+            ← Back to creation
           </a>
-        )}
-      </section>
+        </div>
+        <div className="acp-live-grid">
+          <div className="acp-program">
+            <div className="acp-program-label">
+              <span>PROGRAM OUTPUT</span>
+              <span>
+                {connected ? "CONNECTED" : active ? "REHEARSAL" : "OFF AIR"}
+              </span>
+            </div>
+            <div className="acp-program-screen">
+              <canvas
+                ref={canvas}
+                width={720}
+                height={1280}
+                style={{
+                  aspectRatio: layout === "portrait" ? "9 / 16" : "16 / 9",
+                }}
+                aria-label="Character program output"
+              />
+              {!active && !starting && (
+                <div className="acp-program-empty">
+                  <span>✳</span>
+                  <strong>Your show starts here.</strong>
+                  <p>
+                    Prepare the scenes, connect your coin’s stream, then go
+                    live.
+                  </p>
+                </div>
+              )}
+            </div>
+            <div className="acp-program-status" role="status">
+              <span>Show: {phase}</span>
+              <span>Chat: {chat}</span>
+            </div>
+            <p className="acp-stream-health">{health}</p>
+          </div>
+          <section className="acp-stream-setup">
+            <span className="lp-kicker">CONNECT YOUR PUMP.FUN STREAM</span>
+            <h2>
+              Ready when <em>you are.</em>
+            </h2>
+            {!viewer.wallet ? (
+              <div className="acp-live-notice">
+                <p>
+                  Connect the wallet that owns this character to load its token
+                  and prepared videos.
+                </p>
+                <button className="lp-primary" onClick={connect}>
+                  Connect wallet
+                </button>
+              </div>
+            ) : (
+              <div className="acp-live-readiness">
+                <span>
+                  {loading
+                    ? "Loading your show…"
+                    : manifest?.ready
+                      ? `${manifest.clips.length} scenes ready`
+                      : "Generate the current scenes before going live."}
+                </span>
+                <button
+                  className="lp-text-link"
+                  disabled={active || starting || loading}
+                  onClick={() => setRevision((n) => n + 1)}
+                >
+                  Refresh show ↻
+                </button>
+              </div>
+            )}
+            <label>
+              Token linked to this character
+              <input
+                value={manifest?.mint || "No confirmed coin linked yet"}
+                readOnly
+                aria-label="Linked token contract"
+              />
+            </label>
+            {manifest?.mint && (
+              <a
+                className="lp-text-link"
+                href={`https://pump.fun/coin/${manifest.mint}`}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Open this coin on pump.fun ↗
+              </a>
+            )}
+            <label>
+              Output format
+              <select
+                value={layout}
+                disabled={active || starting}
+                onChange={(e) => setLayout(e.target.value)}
+              >
+                <option value="portrait">Portrait · 9:16</option>
+                <option value="landscape">Landscape · 16:9</option>
+              </select>
+            </label>
+            <label>
+              Stream URL (WHIP)
+              <input
+                type="url"
+                value={endpoint}
+                onChange={(e) => setEndpoint(e.target.value)}
+                placeholder="https://pump-….whip.livekit.cloud/w"
+                autoComplete="off"
+                spellCheck={false}
+                disabled={connected || starting || publishing}
+              />
+            </label>
+            <label>
+              Stream key
+              <input
+                type="password"
+                value={key}
+                onChange={(e) => setKey(e.target.value)}
+                placeholder="Paste this coin’s stream key"
+                autoComplete="off"
+                spellCheck={false}
+                disabled={connected || starting || publishing}
+              />
+            </label>
+            <p className="acp-live-help">
+              Copy the stream credentials from this coin’s pump.fun streaming
+              settings. The supplied key controls the destination; ACP connects
+              chat to the token shown above. Keys stay in this tab’s memory.
+            </p>
+            {error && (
+              <p role="alert" className="acp-live-error">
+                {error}
+              </p>
+            )}
+            <button
+              className="lp-primary acp-go-live"
+              disabled={!canPublish}
+              onClick={() => void (active ? publish() : start(true))}
+            >
+              {starting || publishing
+                ? "Connecting…"
+                : connected
+                  ? "Stream connected"
+                  : "Go Live ↗"}
+            </button>
+            <div className="acp-live-actions">
+              <button
+                className="lp-secondary"
+                disabled={!manifest?.ready || active || starting}
+                onClick={() => void start(false)}
+              >
+                Preview show
+              </button>
+              <button
+                className="lp-secondary"
+                disabled={!active && !starting && !publishing}
+                onClick={() => void stop()}
+              >
+                Stop stream
+              </button>
+            </div>
+            <div className="acp-live-notice">
+              <strong>Keep this studio tab open.</strong>
+              <p>
+                This browser sends the video and audio directly to Pump. Closing
+                the tab or letting the device sleep interrupts the stream. Each
+                character runs in its own tab.
+              </p>
+            </div>
+            <p className="acp-live-help">
+              Go Live starts the prepared videos and reads this token’s chat
+              during pauses. New scenes and spoken replies require connected
+              generation services. After connecting, open the coin to verify
+              public playback.
+            </p>
+          </section>
+        </div>
+      </div>
+      <AcpFooter />
     </main>
   );
 }

@@ -336,7 +336,7 @@ function Home() {
       setCoin(r);
       setNotice(
         r.status === "confirmed"
-          ? "Coin confirmed. Broadcast setup is separate."
+          ? "Coin confirmed. Open its broadcast studio, enter the Pump stream URL and key, then press Go Live."
           : "Launch status: " + r.status,
       );
     });
@@ -655,7 +655,7 @@ function Home() {
                       target="_blank"
                       rel="noreferrer"
                     >
-                      Open this character’s broadcast studio ↗
+                      Set up stream & Go Live ↗
                     </a>
                     <div className="lp-pair-info">
                       <strong>NVDAX pair · 1% ACP creator fee</strong>

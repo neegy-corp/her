@@ -2,6 +2,7 @@ export function validateWhipEndpoint(value: string) {
   const u = new URL(value);
   if (
     u.protocol !== "https:" ||
+    (u.port && u.port !== "443") ||
     !/^pump-[a-z0-9-]+\.whip\.livekit\.cloud$/.test(u.hostname) ||
     u.username ||
     u.password ||
@@ -18,10 +19,37 @@ export class WhipPublisher {
   private bytes = 0;
   private frames = 0;
   private timestamp = 0;
-  async start(stream: MediaStream, endpoint: string, key: string) {
+  private operation = 0;
+  private pending: AbortController | null = null;
+  async start(
+    stream: MediaStream,
+    endpoint: string,
+    key: string,
+    signal?: AbortSignal,
+  ) {
     if (this.peer) throw new Error("This publisher is already connected.");
     const target = validateWhipEndpoint(endpoint);
     if (!key.trim()) throw new Error("A stream key is required.");
+    if (key.trim().length > 4096 || !/^[\x21-\x7e]+$/.test(key.trim()))
+      throw new Error("Invalid stream key format.");
+    if (signal?.aborted) throw new Error("Broadcast start cancelled.");
+    if (
+      !stream.getVideoTracks().some((t) => t.readyState === "live") ||
+      !stream.getAudioTracks().some((t) => t.readyState === "live")
+    )
+      throw new Error(
+        "The character's video and audio must be ready before going live.",
+      );
+    const operation = ++this.operation;
+    const pending = new AbortController();
+    this.pending = pending;
+    const abort = signal
+      ? AbortSignal.any([signal, pending.signal])
+      : pending.signal;
+    const assertCurrent = () => {
+      if (abort.aborted || operation !== this.operation)
+        throw new Error("Broadcast start cancelled.");
+    };
     const peer = new RTCPeerConnection({ bundlePolicy: "max-bundle" });
     this.peer = peer;
     this.key = key.trim();
@@ -32,10 +60,16 @@ export class WhipPublisher {
           streams: [stream],
         });
       await peer.setLocalDescription(await peer.createOffer());
+      assertCurrent();
       await new Promise<void>((resolve, reject) => {
         const done = () => {
           clearTimeout(timer);
           peer.removeEventListener("icegatheringstatechange", changed);
+          abort.removeEventListener("abort", cancelled);
+        };
+        const cancelled = () => {
+          done();
+          reject(new Error("Broadcast start cancelled."));
         };
         const changed = () => {
           if (peer.iceGatheringState === "complete") {
@@ -48,8 +82,14 @@ export class WhipPublisher {
           reject(new Error("ICE gathering timed out."));
         }, 12000);
         peer.addEventListener("icegatheringstatechange", changed);
+        abort.addEventListener("abort", cancelled, { once: true });
+        if (abort.aborted) {
+          cancelled();
+          return;
+        }
         changed();
       });
+      assertCurrent();
       const response = await fetch(target.href, {
         method: "POST",
         headers: {
@@ -58,7 +98,7 @@ export class WhipPublisher {
         },
         body: peer.localDescription!.sdp,
         redirect: "error",
-        signal: AbortSignal.timeout(20000),
+        signal: AbortSignal.any([abort, AbortSignal.timeout(20000)]),
       });
       if (response.status !== 201)
         throw new Error(`Pump WHIP rejected the stream (${response.status}).`);
@@ -68,15 +108,31 @@ export class WhipPublisher {
           "Pump WHIP did not expose its session URL. Check CORS support.",
         );
       const resource = new URL(location, target);
-      if (resource.origin !== target.origin)
+      if (
+        resource.origin !== target.origin ||
+        resource.username ||
+        resource.password ||
+        resource.hash
+      )
         throw new Error("Unexpected WHIP session origin.");
+      if (abort.aborted || operation !== this.operation) {
+        await fetch(resource.href, {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${key.trim()}` },
+          redirect: "error",
+          signal: AbortSignal.timeout(5000),
+        }).catch(() => undefined);
+        throw new Error("Broadcast start cancelled.");
+      }
       this.location = resource.href;
       await peer.setRemoteDescription({
         type: "answer",
         sdp: await response.text(),
       });
+      assertCurrent();
     } catch (error) {
-      await this.stop();
+      if (operation === this.operation) await this.stop();
+      else peer.close();
       throw error;
     }
   }
@@ -88,7 +144,15 @@ export class WhipPublisher {
         advancingFrames: false,
         publicPlaybackVerified: false,
       };
-    const reports = await this.peer.getStats();
+    const peer = this.peer;
+    const reports = await peer.getStats();
+    if (this.peer !== peer)
+      return {
+        state: "stopped",
+        kbps: 0,
+        advancingFrames: false,
+        publicPlaybackVerified: false,
+      };
     let bytes = 0,
       frames = 0;
     reports.forEach((r) => {
@@ -114,6 +178,9 @@ export class WhipPublisher {
     return result;
   }
   async stop() {
+    ++this.operation;
+    this.pending?.abort();
+    this.pending = null;
     this.peer?.close();
     this.peer = null;
     const location = this.location,

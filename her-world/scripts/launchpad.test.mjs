@@ -536,3 +536,224 @@ test("directory queries confirmed matching records with bounded pagination and p
     else process.env.DATABASE_URL = previous;
   }
 });
+
+const { WhipPublisher } = await import("../lib/whip-publisher.ts");
+const { broadcastPreflight } = await import("../lib/broadcast-plan.ts");
+test("Go Live preflight binds the confirmed token and requires all prepared current scenes", () => {
+  const show = defaultShow(),
+    mint = Keypair.generate().publicKey.toBase58();
+  const manifest = {
+    name: "Test",
+    mint,
+    ready: true,
+    show,
+    clips: show.clips.map((c) => ({
+      id: c.id,
+      url: "https://media.example/clip.mp4",
+    })),
+  };
+  const endpoint = "https://pump-test.whip.livekit.cloud/w";
+  assert.equal(broadcastPreflight(manifest, endpoint, " key ").mint, mint);
+  assert.throws(() =>
+    broadcastPreflight({ ...manifest, mint: null }, endpoint, "key"),
+  );
+  assert.throws(() =>
+    broadcastPreflight(
+      { ...manifest, clips: manifest.clips.slice(1) },
+      endpoint,
+      "key",
+    ),
+  );
+  assert.throws(() =>
+    broadcastPreflight(
+      {
+        ...manifest,
+        clips: manifest.clips.map((c) => ({ ...c, url: "javascript:bad" })),
+      },
+      endpoint,
+      "key",
+    ),
+  );
+  assert.throws(() =>
+    broadcastPreflight(manifest, "https://evil.example/w", "key"),
+  );
+  assert.throws(() =>
+    broadcastPreflight(
+      manifest,
+      "https://pump-test.whip.livekit.cloud:8443/w",
+      "key",
+    ),
+  );
+  assert.throws(() =>
+    broadcastPreflight(manifest, endpoint, "key\r\ninjected"),
+  );
+});
+class TestPeer extends EventTarget {
+  connectionState = "new";
+  iceGatheringState = "complete";
+  localDescription = null;
+  closed = false;
+  sent = 0;
+  frames = 0;
+  addTransceiver() {}
+  async createOffer() {
+    return { type: "offer", sdp: "v=0\r\n" };
+  }
+  async setLocalDescription(v) {
+    this.localDescription = v;
+  }
+  async setRemoteDescription() {
+    if (this.closed) throw new Error("closed");
+    this.connectionState = "connected";
+  }
+  async getStats() {
+    this.sent += 1000;
+    this.frames += 24;
+    return [
+      {
+        type: "outbound-rtp",
+        bytesSent: this.sent,
+        framesEncoded: this.frames,
+      },
+    ];
+  }
+  close() {
+    this.closed = true;
+    this.connectionState = "closed";
+  }
+}
+const liveMedia = () => ({
+  getTracks: () => [{ kind: "video" }, { kind: "audio" }],
+  getVideoTracks: () => [{ readyState: "live" }],
+  getAudioTracks: () => [{ readyState: "live" }],
+});
+test("WHIP sends credentials only in headers, verifies transport separately and deletes session on stop", async () => {
+  const oldFetch = globalThis.fetch,
+    oldPeer = globalThis.RTCPeerConnection;
+  const calls = [];
+  globalThis.RTCPeerConnection = TestPeer;
+  globalThis.fetch = async (url, init) => {
+    calls.push({ url, init });
+    return init.method === "POST"
+      ? new Response("v=0", {
+          status: 201,
+          headers: { location: "/session/test" },
+        })
+      : new Response(null, { status: 204 });
+  };
+  const p = new WhipPublisher();
+  try {
+    await p.start(
+      liveMedia(),
+      "https://pump-test.whip.livekit.cloud/w",
+      "example-secret",
+    );
+    assert.equal(calls[0].init.headers.Authorization, "Bearer example-secret");
+    assert.equal(calls[0].url.includes("example-secret"), false);
+    assert.equal(calls[0].init.redirect, "error");
+    const first = await p.health(),
+      next = await p.health();
+    assert.equal(first.state, "connected");
+    assert.equal(next.advancingFrames, true);
+    assert.equal(next.publicPlaybackVerified, false);
+    await assert.rejects(
+      () => p.start(liveMedia(), "https://pump-test.whip.livekit.cloud/w", "x"),
+      /already connected/,
+    );
+    await p.stop();
+    assert.equal(calls.at(-1).init.method, "DELETE");
+    assert.equal((await p.health()).state, "stopped");
+  } finally {
+    await p.stop();
+    globalThis.fetch = oldFetch;
+    globalThis.RTCPeerConnection = oldPeer;
+  }
+});
+test("WHIP refuses missing audio and rejects redirects to other stream origins", async () => {
+  const oldFetch = globalThis.fetch,
+    oldPeer = globalThis.RTCPeerConnection;
+  let requests = 0;
+  globalThis.RTCPeerConnection = TestPeer;
+  globalThis.fetch = async () => {
+    requests++;
+    return new Response("v=0", {
+      status: 201,
+      headers: { location: "https://other.example/session" },
+    });
+  };
+  const p = new WhipPublisher();
+  try {
+    await assert.rejects(
+      () =>
+        p.start(
+          { ...liveMedia(), getAudioTracks: () => [] },
+          "https://pump-test.whip.livekit.cloud/w",
+          "x",
+        ),
+      /audio must be ready/,
+    );
+    assert.equal(requests, 0);
+    await assert.rejects(
+      () => p.start(liveMedia(), "https://pump-test.whip.livekit.cloud/w", "x"),
+      /Unexpected WHIP/,
+    );
+    assert.equal(requests, 1);
+    assert.equal((await p.health()).state, "stopped");
+  } finally {
+    await p.stop();
+    globalThis.fetch = oldFetch;
+    globalThis.RTCPeerConnection = oldPeer;
+  }
+});
+test("stop during WHIP connection cannot resurrect an old stream or disconnect a newer one", async () => {
+  const oldFetch = globalThis.fetch,
+    oldPeer = globalThis.RTCPeerConnection;
+  globalThis.RTCPeerConnection = TestPeer;
+  let resolveOld, notify;
+  const submitted = new Promise((r) => (notify = r)),
+    pending = new Promise((r) => (resolveOld = r)),
+    calls = [];
+  globalThis.fetch = async (url, init) => {
+    calls.push({ url, method: init.method });
+    if (init.method === "DELETE") return new Response(null, { status: 204 });
+    if (init.headers.Authorization === "Bearer old") {
+      notify();
+      return pending;
+    }
+    return new Response("v=0", {
+      status: 201,
+      headers: { location: "/session/new" },
+    });
+  };
+  const p = new WhipPublisher();
+  try {
+    const first = p.start(
+      liveMedia(),
+      "https://pump-test.whip.livekit.cloud/w",
+      "old",
+    );
+    const rejected = assert.rejects(first, /cancelled/);
+    await submitted;
+    await p.stop();
+    await p.start(liveMedia(), "https://pump-test.whip.livekit.cloud/w", "new");
+    resolveOld(
+      new Response("v=0", {
+        status: 201,
+        headers: { location: "/session/old" },
+      }),
+    );
+    await rejected;
+    assert.equal((await p.health()).state, "connected");
+    assert.ok(
+      calls.some((c) => c.method === "DELETE" && c.url.endsWith("/old")),
+    );
+    assert.equal(
+      calls.some((c) => c.method === "DELETE" && c.url.endsWith("/new")),
+      false,
+    );
+  } finally {
+    await p.stop();
+    globalThis.fetch = oldFetch;
+    globalThis.RTCPeerConnection = oldPeer;
+  }
+});
