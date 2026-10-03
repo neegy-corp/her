@@ -20,7 +20,7 @@ Storage migration `20261003034000_acp_artwork.sql` and the updated allowlist gat
 
 Paid image, video, face, script and coin-creation gates remain disabled until provider funding and acceptance checks are complete. `broadcast:false` remains intentional: the browser studio is not an unattended cloud service and no public test broadcast has been verified.
 
-The new fictional Jean-Paul portrait at `/images/acp-jean-paul.png` was generated using the assistant's image tool. Its included scripts are authored starter examples. Neither is proof that the application's paid media APIs have been exercised. No Jean-Paul video has yet been rendered by those APIs.
+The invented starter cast has been removed from the homepage and creation defaults. New characters begin blank; existing private drafts are preserved. `/create` holds the editor, and `/tokens` lists only confirmed matching coin records with public artwork and Pump links. The directory gateway query is deployed and verified. See `AI-VIDEO-REFERENCES.md` for direct observations of the actual X references; their original generation provider is not established. No reference-style video has yet been rendered through the application’s paid APIs.
 
 No supplied test-wallet private key was imported or used. No actual mainnet transaction or new public livestream was submitted. The existing stopped HER broadcast stays stopped.
 
