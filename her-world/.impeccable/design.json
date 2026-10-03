@@ -1,0 +1,596 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-03T20:47:30.814Z",
+  "title": "Design System: ACP Creator Studio",
+  "extensions": {
+    "colorMeta": {
+      "action-white": {
+        "role": "neutral",
+        "displayName": "Action White",
+        "canonical": "#f4f4f5",
+        "tonalRamp": [
+          "oklch(15% 0.0013 286.38)",
+          "oklch(26% 0.0013 286.38)",
+          "oklch(37% 0.0013 286.38)",
+          "oklch(49% 0.0013 286.38)",
+          "oklch(60% 0.0013 286.38)",
+          "oklch(72% 0.0013 286.38)",
+          "oklch(84% 0.0013 286.38)",
+          "oklch(95% 0.0013 286.38)"
+        ]
+      },
+      "action-hover": {
+        "role": "neutral",
+        "displayName": "Action Hover",
+        "canonical": "#d4d4d8",
+        "tonalRamp": [
+          "oklch(15% 0.0055 286.29)",
+          "oklch(26% 0.0055 286.29)",
+          "oklch(37% 0.0055 286.29)",
+          "oklch(49% 0.0055 286.29)",
+          "oklch(60% 0.0055 286.29)",
+          "oklch(72% 0.0055 286.29)",
+          "oklch(84% 0.0055 286.29)",
+          "oklch(95% 0.0055 286.29)"
+        ]
+      },
+      "action-ink": {
+        "role": "neutral",
+        "displayName": "Action Ink",
+        "canonical": "#18181b",
+        "tonalRamp": [
+          "oklch(15% 0.0059 285.89)",
+          "oklch(26% 0.0059 285.89)",
+          "oklch(37% 0.0059 285.89)",
+          "oklch(49% 0.0059 285.89)",
+          "oklch(60% 0.0059 285.89)",
+          "oklch(72% 0.0059 285.89)",
+          "oklch(84% 0.0059 285.89)",
+          "oklch(95% 0.0059 285.89)"
+        ]
+      },
+      "charcoal-canvas": {
+        "role": "neutral",
+        "displayName": "Charcoal Canvas",
+        "canonical": "#111113",
+        "tonalRamp": [
+          "oklch(15% 0.0041 285.98)",
+          "oklch(26% 0.0041 285.98)",
+          "oklch(37% 0.0041 285.98)",
+          "oklch(49% 0.0041 285.98)",
+          "oklch(60% 0.0041 285.98)",
+          "oklch(72% 0.0041 285.98)",
+          "oklch(84% 0.0041 285.98)",
+          "oklch(95% 0.0041 285.98)"
+        ]
+      },
+      "charcoal-card": {
+        "role": "neutral",
+        "displayName": "Charcoal Card",
+        "canonical": "#1b1b1f",
+        "tonalRamp": [
+          "oklch(15% 0.0077 285.76)",
+          "oklch(26% 0.0077 285.76)",
+          "oklch(37% 0.0077 285.76)",
+          "oklch(49% 0.0077 285.76)",
+          "oklch(60% 0.0077 285.76)",
+          "oklch(72% 0.0077 285.76)",
+          "oklch(84% 0.0077 285.76)",
+          "oklch(95% 0.0077 285.76)"
+        ]
+      },
+      "charcoal-popover": {
+        "role": "neutral",
+        "displayName": "Charcoal Popover",
+        "canonical": "#202024",
+        "tonalRamp": [
+          "oklch(15% 0.0075 285.83)",
+          "oklch(26% 0.0075 285.83)",
+          "oklch(37% 0.0075 285.83)",
+          "oklch(49% 0.0075 285.83)",
+          "oklch(60% 0.0075 285.83)",
+          "oklch(72% 0.0075 285.83)",
+          "oklch(84% 0.0075 285.83)",
+          "oklch(95% 0.0075 285.83)"
+        ]
+      },
+      "charcoal-secondary": {
+        "role": "neutral",
+        "displayName": "Charcoal Secondary",
+        "canonical": "#27272b",
+        "tonalRamp": [
+          "oklch(15% 0.0073 285.91)",
+          "oklch(26% 0.0073 285.91)",
+          "oklch(37% 0.0073 285.91)",
+          "oklch(49% 0.0073 285.91)",
+          "oklch(60% 0.0073 285.91)",
+          "oklch(72% 0.0073 285.91)",
+          "oklch(84% 0.0073 285.91)",
+          "oklch(95% 0.0073 285.91)"
+        ]
+      },
+      "select-focus": {
+        "role": "neutral",
+        "displayName": "Select Focus",
+        "canonical": "#303036",
+        "tonalRamp": [
+          "oklch(15% 0.0106 285.77)",
+          "oklch(26% 0.0106 285.77)",
+          "oklch(37% 0.0106 285.77)",
+          "oklch(49% 0.0106 285.77)",
+          "oklch(60% 0.0106 285.77)",
+          "oklch(72% 0.0106 285.77)",
+          "oklch(84% 0.0106 285.77)",
+          "oklch(95% 0.0106 285.77)"
+        ]
+      },
+      "select-focus-ink": {
+        "role": "neutral",
+        "displayName": "Select Focus Ink",
+        "canonical": "#fafafa",
+        "tonalRamp": [
+          "oklch(15% 0.0000 0.00)",
+          "oklch(26% 0.0000 0.00)",
+          "oklch(37% 0.0000 0.00)",
+          "oklch(49% 0.0000 0.00)",
+          "oklch(60% 0.0000 0.00)",
+          "oklch(72% 0.0000 0.00)",
+          "oklch(84% 0.0000 0.00)",
+          "oklch(95% 0.0000 0.00)"
+        ]
+      },
+      "selected-mode": {
+        "role": "neutral",
+        "displayName": "Selected Mode",
+        "canonical": "#424249",
+        "tonalRamp": [
+          "oklch(15% 0.0118 285.83)",
+          "oklch(26% 0.0118 285.83)",
+          "oklch(37% 0.0118 285.83)",
+          "oklch(49% 0.0118 285.83)",
+          "oklch(60% 0.0118 285.83)",
+          "oklch(72% 0.0118 285.83)",
+          "oklch(84% 0.0118 285.83)",
+          "oklch(95% 0.0118 285.83)"
+        ]
+      },
+      "neutral-muted": {
+        "role": "neutral",
+        "displayName": "Neutral Muted",
+        "canonical": "#a1a1aa",
+        "tonalRamp": [
+          "oklch(15% 0.0129 286.07)",
+          "oklch(26% 0.0129 286.07)",
+          "oklch(37% 0.0129 286.07)",
+          "oklch(49% 0.0129 286.07)",
+          "oklch(60% 0.0129 286.07)",
+          "oklch(72% 0.0129 286.07)",
+          "oklch(84% 0.0129 286.07)",
+          "oklch(95% 0.0129 286.07)"
+        ]
+      },
+      "supporting-ink": {
+        "role": "neutral",
+        "displayName": "Supporting Ink",
+        "canonical": "#bdbdc2",
+        "tonalRamp": [
+          "oklch(15% 0.0070 286.24)",
+          "oklch(26% 0.0070 286.24)",
+          "oklch(37% 0.0070 286.24)",
+          "oklch(49% 0.0070 286.24)",
+          "oklch(60% 0.0070 286.24)",
+          "oklch(72% 0.0070 286.24)",
+          "oklch(84% 0.0070 286.24)",
+          "oklch(95% 0.0070 286.24)"
+        ]
+      },
+      "panel-line": {
+        "role": "neutral",
+        "displayName": "Panel Line",
+        "canonical": "#323237",
+        "tonalRamp": [
+          "oklch(15% 0.0088 285.89)",
+          "oklch(26% 0.0088 285.89)",
+          "oklch(37% 0.0088 285.89)",
+          "oklch(49% 0.0088 285.89)",
+          "oklch(60% 0.0088 285.89)",
+          "oklch(72% 0.0088 285.89)",
+          "oklch(84% 0.0088 285.89)",
+          "oklch(95% 0.0088 285.89)"
+        ]
+      },
+      "field-line": {
+        "role": "neutral",
+        "displayName": "Field Line",
+        "canonical": "#3f3f46",
+        "tonalRamp": [
+          "oklch(15% 0.0119 285.81)",
+          "oklch(26% 0.0119 285.81)",
+          "oklch(37% 0.0119 285.81)",
+          "oklch(49% 0.0119 285.81)",
+          "oklch(60% 0.0119 285.81)",
+          "oklch(72% 0.0119 285.81)",
+          "oklch(84% 0.0119 285.81)",
+          "oklch(95% 0.0119 285.81)"
+        ]
+      },
+      "periwinkle": {
+        "role": "primary",
+        "displayName": "Periwinkle",
+        "canonical": "#b9b4f5",
+        "tonalRamp": [
+          "oklch(15% 0.0915 287.65)",
+          "oklch(26% 0.0915 287.65)",
+          "oklch(37% 0.0915 287.65)",
+          "oklch(49% 0.0915 287.65)",
+          "oklch(60% 0.0915 287.65)",
+          "oklch(72% 0.0915 287.65)",
+          "oklch(84% 0.0915 287.65)",
+          "oklch(95% 0.0915 287.65)"
+        ]
+      },
+      "selection-ground": {
+        "role": "primary",
+        "displayName": "Selection Ground",
+        "canonical": "#5b5486",
+        "tonalRamp": [
+          "oklch(15% 0.0798 289.41)",
+          "oklch(26% 0.0798 289.41)",
+          "oklch(37% 0.0798 289.41)",
+          "oklch(49% 0.0798 289.41)",
+          "oklch(60% 0.0798 289.41)",
+          "oklch(72% 0.0798 289.41)",
+          "oklch(84% 0.0798 289.41)",
+          "oklch(95% 0.0798 289.41)"
+        ]
+      },
+      "selection-ink": {
+        "role": "neutral",
+        "displayName": "Selection Ink",
+        "canonical": "#ffffff",
+        "tonalRamp": [
+          "oklch(15% 0.0000 0.00)",
+          "oklch(26% 0.0000 0.00)",
+          "oklch(37% 0.0000 0.00)",
+          "oklch(49% 0.0000 0.00)",
+          "oklch(60% 0.0000 0.00)",
+          "oklch(72% 0.0000 0.00)",
+          "oklch(84% 0.0000 0.00)",
+          "oklch(95% 0.0000 0.00)"
+        ]
+      },
+      "scrollbar-thumb": {
+        "role": "neutral",
+        "displayName": "Scrollbar Thumb",
+        "canonical": "#52525b",
+        "tonalRamp": [
+          "oklch(15% 0.0146 285.79)",
+          "oklch(26% 0.0146 285.79)",
+          "oklch(37% 0.0146 285.79)",
+          "oklch(49% 0.0146 285.79)",
+          "oklch(60% 0.0146 285.79)",
+          "oklch(72% 0.0146 285.79)",
+          "oklch(84% 0.0146 285.79)",
+          "oklch(95% 0.0146 285.79)"
+        ]
+      },
+      "checkbox-line": {
+        "role": "neutral",
+        "displayName": "Checkbox Line",
+        "canonical": "#71717a",
+        "tonalRamp": [
+          "oklch(15% 0.0138 285.94)",
+          "oklch(26% 0.0138 285.94)",
+          "oklch(37% 0.0138 285.94)",
+          "oklch(49% 0.0138 285.94)",
+          "oklch(60% 0.0138 285.94)",
+          "oklch(72% 0.0138 285.94)",
+          "oklch(84% 0.0138 285.94)",
+          "oklch(95% 0.0138 285.94)"
+        ]
+      },
+      "switch-off": {
+        "role": "neutral",
+        "displayName": "Switch Off",
+        "canonical": "#48484f",
+        "tonalRamp": [
+          "oklch(15% 0.0116 285.87)",
+          "oklch(26% 0.0116 285.87)",
+          "oklch(37% 0.0116 285.87)",
+          "oklch(49% 0.0116 285.87)",
+          "oklch(60% 0.0116 285.87)",
+          "oklch(72% 0.0116 285.87)",
+          "oklch(84% 0.0116 285.87)",
+          "oklch(95% 0.0116 285.87)"
+        ]
+      },
+      "step-ink": {
+        "role": "neutral",
+        "displayName": "Step Ink",
+        "canonical": "#222029",
+        "tonalRamp": [
+          "oklch(15% 0.0171 295.32)",
+          "oklch(26% 0.0171 295.32)",
+          "oklch(37% 0.0171 295.32)",
+          "oklch(49% 0.0171 295.32)",
+          "oklch(60% 0.0171 295.32)",
+          "oklch(72% 0.0171 295.32)",
+          "oklch(84% 0.0171 295.32)",
+          "oklch(95% 0.0171 295.32)"
+        ]
+      },
+      "error-ink": {
+        "role": "tertiary",
+        "displayName": "Error Ink",
+        "canonical": "#e99b9b",
+        "tonalRamp": [
+          "oklch(15% 0.0939 19.45)",
+          "oklch(26% 0.0939 19.45)",
+          "oklch(37% 0.0939 19.45)",
+          "oklch(49% 0.0939 19.45)",
+          "oklch(60% 0.0939 19.45)",
+          "oklch(72% 0.0939 19.45)",
+          "oklch(84% 0.0939 19.45)",
+          "oklch(95% 0.0939 19.45)"
+        ]
+      },
+      "dialog-backdrop": {
+        "role": "neutral",
+        "displayName": "Dialog Backdrop",
+        "canonical": "rgba(0,0,0,.8)",
+        "tonalRamp": [
+          "oklch(15% 0.0000 0.00)",
+          "oklch(26% 0.0000 0.00)",
+          "oklch(37% 0.0000 0.00)",
+          "oklch(49% 0.0000 0.00)",
+          "oklch(60% 0.0000 0.00)",
+          "oklch(72% 0.0000 0.00)",
+          "oklch(84% 0.0000 0.00)",
+          "oklch(95% 0.0000 0.00)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Homepage Display",
+        "purpose": "Homepage promise only; 780px media rule uses clamp(46px,8.5vw,64px), line-height 1.06 and tracking -0.035em."
+      },
+      "section-headline": {
+        "displayName": "Brand Section Headline",
+        "purpose": "Workspace introduction and discovery copy; 34px below 780px, never the nested editor title."
+      },
+      "directory-headline": {
+        "displayName": "Discover Headline",
+        "purpose": "42px directory art-heading, 34px below 780px."
+      },
+      "studio-headline": {
+        "displayName": "My Studio Headline",
+        "purpose": "38px companion heading, then 30px below 780px and 27px below 440px."
+      },
+      "headline": {
+        "displayName": "Builder Headline",
+        "purpose": "30px builder title, 25px below 780px."
+      },
+      "title": {
+        "displayName": "Tool Title",
+        "purpose": "22px form and scene headings."
+      },
+      "workspace-title": {
+        "displayName": "Workspace Title",
+        "purpose": "24px editable-preview title and desktop character-preview caption. The stacked character caption becomes 20px."
+      },
+      "identity-title": {
+        "displayName": "Saved Character Title",
+        "purpose": "21px compact card identity title with 10px image/monogram corners."
+      },
+      "body": {
+        "displayName": "Operational Body",
+        "purpose": "14px base studio prose."
+      },
+      "lead": {
+        "displayName": "Hero Lead",
+        "purpose": "16px / 1.8 copy with a 375px desktop measure; 15px and a 355px maximum below 780px."
+      },
+      "label": {
+        "displayName": "Field Label",
+        "purpose": "Persistent 13px field labels; standard action labels use 13px / 1.4."
+      },
+      "supporting": {
+        "displayName": "Supporting Note",
+        "purpose": "12px notes and disclosures; current compact status and metadata remain 10–11px."
+      }
+    },
+    "shadows": [
+      {
+        "name": "working-surfaces",
+        "value": "none",
+        "purpose": "Scoped ACP buttons, fields and stationary work areas use tone and strokes."
+      },
+      {
+        "name": "select-overlay",
+        "value": "var(--shadow-md)",
+        "purpose": "Existing Tailwind shadow-md retained on the Radix select portal; do not copy to ordinary cards."
+      }
+    ],
+    "motion": [
+      {
+        "name": "workspace-reveal",
+        "value": "clip-path .2s cubic-bezier(.16,1,.3,1)",
+        "purpose": "Panel reveal from inset(0 0 5% 0) to inset(0) when the editable homepage view changes."
+      },
+      {
+        "name": "legacy-color-feedback",
+        "value": "background .15s",
+        "purpose": "Existing launchpad button color feedback; shadcn components also retain their state transitions."
+      },
+      {
+        "name": "progress-spinner",
+        "value": "1.2s linear infinite",
+        "purpose": "Existing generation progress only."
+      },
+      {
+        "name": "reduced-motion",
+        "value": "animation: none !important; transition: none !important; scroll-behavior: auto !important",
+        "purpose": "Applied to ACP descendants and pseudo-elements for prefers-reduced-motion: reduce."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "studio-compact",
+        "value": "1000px"
+      },
+      {
+        "name": "brand-and-studio-stack",
+        "value": "780px"
+      },
+      {
+        "name": "inherited-tabs-and-dashboard-stack",
+        "value": "700px"
+      },
+      {
+        "name": "studio-small",
+        "value": "440px"
+      },
+      {
+        "name": "directory-two-columns-and-broadcast-stack",
+        "value": "800px"
+      },
+      {
+        "name": "directory-one-column",
+        "value": "520px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The current committed creation action; ordinary tools use a 40px minimum.",
+      "html": "<button class=\"ds-button ds-primary ds-focus\">Continue <svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M5 12h14m-7-7 7 7-7 7\"/></svg></button>",
+      "css": ".ds-primary{display:inline-flex;align-items:center;justify-content:center;gap:8px;border-radius:8px;min-height:40px;font:500 13px/1.4 \"ACP Grotesk\",sans-serif;cursor:pointer;transition:background .15s;padding:11px 17px;background:var(--primary,#f4f4f5);color:var(--primary-foreground,#18181b);border:1px solid transparent}.ds-primary:hover:not(:disabled){background:#d4d4d8;transform:none}.ds-focus:focus-visible{outline:2px solid var(--ring,#b9b4f5);outline-offset:3px}.ds-button:disabled{opacity:.45;cursor:not-allowed}.ds-button svg{flex-shrink:0}@media(prefers-reduced-motion:reduce){.ds-button{transition:none}}"
+    },
+    {
+      "name": "Outline Button",
+      "kind": "button",
+      "refersTo": "button-outline",
+      "description": "A quieter alternative, reference action or wallet connection.",
+      "html": "<button class=\"ds-button ds-outline ds-focus\">Use reference photos <svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M5 12h14m-7-7 7 7-7 7\"/></svg></button>",
+      "css": ".ds-outline{display:inline-flex;align-items:center;justify-content:center;gap:8px;border-radius:8px;min-height:40px;font:500 13px/1.4 \"ACP Grotesk\",sans-serif;cursor:pointer;transition:background .15s;padding:10px 16px;background:transparent;color:var(--foreground,#f4f4f5);border:1px solid var(--input,#3f3f46)}.ds-outline:hover:not(:disabled){background:var(--secondary,#27272b);color:var(--foreground,#f4f4f5)}.ds-focus:focus-visible{outline:2px solid var(--ring,#b9b4f5);outline-offset:3px}.ds-button:disabled{opacity:.45;cursor:not-allowed}.ds-button svg{flex-shrink:0}@media(prefers-reduced-motion:reduce){.ds-button{transition:none}}"
+    },
+    {
+      "name": "Ghost Button",
+      "kind": "button",
+      "refersTo": "button-ghost",
+      "description": "A restrained utility alongside the main action.",
+      "html": "<button class=\"ds-button ds-ghost ds-focus\">New character</button>",
+      "css": ".ds-ghost{display:inline-flex;align-items:center;justify-content:center;gap:8px;border-radius:8px;min-height:40px;font:500 13px/1.4 \"ACP Grotesk\",sans-serif;cursor:pointer;transition:background .15s;padding:10px 16px;background:transparent;color:var(--muted-foreground,#a1a1aa);border:0}.ds-ghost:hover:not(:disabled){background:var(--secondary,#27272b);color:var(--foreground,#f4f4f5)}.ds-focus:focus-visible{outline:2px solid var(--ring,#b9b4f5);outline-offset:3px}.ds-button:disabled{opacity:.45;cursor:not-allowed}.ds-button svg{flex-shrink:0}@media(prefers-reduced-motion:reduce){.ds-button{transition:none}}"
+    },
+    {
+      "name": "Text Field",
+      "kind": "input",
+      "refersTo": "text-field",
+      "description": "A persistent label, dark input, example placeholder and visible keyboard focus.",
+      "html": "<label class=\"ds-field\">Character name<input class=\"ds-focus\" placeholder=\"Give them a name\" /></label>",
+      "css": ".ds-field{display:grid;gap:9px;color:var(--foreground,#f4f4f5);font:500 13px/1.5 \"ACP Grotesk\",sans-serif;max-width:420px}.ds-field input{min-width:0;min-height:42px;padding:11px 13px;border:1px solid var(--input,#3f3f46);border-radius:8px;background:var(--background,#111113);color:var(--foreground,#f4f4f5);caret-color:var(--ring,#b9b4f5);font:400 14px/1.5 \"ACP Grotesk\",sans-serif;transition:color .15s,box-shadow .15s}.ds-field input::placeholder{color:var(--muted-foreground,#a1a1aa);opacity:1}.ds-field input:focus-visible{border-color:var(--ring,#b9b4f5)}.ds-field input[aria-invalid=true]{border-color:var(--destructive,#e99b9b)}.ds-field input:disabled{opacity:.5;cursor:not-allowed}.ds-focus:focus-visible{outline:2px solid var(--ring,#b9b4f5);outline-offset:3px}@media(prefers-reduced-motion:reduce){.ds-field input{transition:none}}"
+    },
+    {
+      "name": "Global Navigation",
+      "kind": "nav",
+      "refersTo": "navigation",
+      "description": "Three sentence-case routes with a periwinkle active underline; compact layouts use a full-width second row.",
+      "html": "<nav class=\"ds-nav\" aria-label=\"Main navigation\"><a class=\"ds-focus\" href=\"#create\">Create</a><a class=\"ds-focus\" href=\"#discover\" aria-current=\"page\">Discover</a><a class=\"ds-focus\" href=\"#studio\">My studio</a></nav>",
+      "css": ".ds-nav{display:flex;align-items:center;gap:27px;background:var(--background,#111113)}.ds-nav a{display:flex;align-items:center;min-height:40px;padding:10px 0;color:var(--muted-foreground,#a1a1aa);font:400 13px/1.6 \"ACP Grotesk\",sans-serif;text-decoration:none}.ds-nav a:hover,.ds-nav a[aria-current=page]{color:var(--foreground,#f4f4f5)}.ds-nav a[aria-current=page]{text-decoration:underline;text-underline-offset:9px;text-decoration-color:var(--ring,#b9b4f5)}.ds-focus:focus-visible{outline:2px solid var(--ring,#b9b4f5);outline-offset:3px}@media(max-width:780px){.ds-nav{width:100%;justify-content:space-between;border-top:1px solid var(--border-ui,#323237);padding-top:7px;gap:20px}.ds-nav a{min-height:34px;font-size:12px}}"
+    },
+    {
+      "name": "Scene Mode",
+      "kind": "chip",
+      "refersTo": "scene-mode",
+      "description": "Pressed state distinguishes a scene's operating mode.",
+      "html": "<div class=\"ds-modes\" role=\"group\" aria-label=\"Scene mode\"><button class=\"ds-focus\" aria-pressed=\"true\">Dialogue</button><button class=\"ds-focus\" aria-pressed=\"false\">Performance</button></div>",
+      "css": ".ds-modes{display:flex;gap:7px}.ds-modes button{min-height:32px;padding:7px 10px;border:0;border-radius:8px;background:var(--secondary,#27272b);color:var(--muted-foreground,#a1a1aa);font:500 11px/1.4 \"ACP Grotesk\",sans-serif;cursor:pointer;transition:background .15s}.ds-modes button[aria-pressed=true]{background:#424249;color:var(--foreground,#f4f4f5)}.ds-modes button:hover:not([aria-pressed=true]){color:var(--foreground,#f4f4f5)}.ds-focus:focus-visible{outline:2px solid var(--ring,#b9b4f5);outline-offset:3px}@media(prefers-reduced-motion:reduce){.ds-modes button{transition:none}}"
+    },
+    {
+      "name": "Device Save Badge",
+      "kind": "chip",
+      "refersTo": "device-status",
+      "description": "Quiet local-device status; it does not assert wallet storage.",
+      "html": "<span class=\"ds-status\" role=\"status\"><svg width=\"13\" height=\"13\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"m9 12 2 2 4-4\"/></svg>Saved locally</span>",
+      "css": ".ds-status{display:inline-flex;align-items:center;gap:5px;min-width:60px;padding:4px 9px;border:0;border-radius:6px;background:var(--secondary,#27272b);color:var(--muted-foreground,#a1a1aa);font:500 11px/1.4 \"ACP Grotesk\",sans-serif;white-space:nowrap}.ds-status svg{flex-shrink:0}"
+    },
+    {
+      "name": "Studio Card",
+      "kind": "card",
+      "refersTo": "studio-card",
+      "description": "A saved character with a compact identity heading, device scope and four continuation routes.",
+      "html": "<article class=\"ds-card\"><div class=\"ds-identity\"><span class=\"ds-monogram\">S</span><div><h2>Studio review</h2><p>No ticker yet<span class=\"ds-scope\">Saved locally</span></p></div></div><p>Your next character starts here.</p><div class=\"ds-links\"><a class=\"ds-focus\" href=\"#character\">Character <svg width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M7 7h10v10M7 17 17 7\"/></svg></a><a class=\"ds-focus\" href=\"#voice\">Voice &amp; setting <svg width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M7 7h10v10M7 17 17 7\"/></svg></a><a class=\"ds-focus\" href=\"#show\">Show <svg width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M7 7h10v10M7 17 17 7\"/></svg></a><a class=\"ds-focus\" href=\"#launch\">Launch <svg width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M7 7h10v10M7 17 17 7\"/></svg></a></div></article>",
+      "css": ".ds-card{background:var(--card,#1b1b1f);border:1px solid var(--border-ui,#323237);border-radius:12px;padding:28px;max-width:520px;color:var(--foreground,#f4f4f5);font-family:\"ACP Grotesk\",sans-serif}.ds-identity{display:flex;gap:20px;align-items:center}.ds-monogram{display:grid;place-items:center;width:64px;height:64px;flex-shrink:0;border-radius:10px;background:var(--card,#1b1b1f);font-size:32px}.ds-card h2{font-size:21px;line-height:1.25;font-weight:600;letter-spacing:-.02em;overflow-wrap:anywhere;margin:0 0 8px}.ds-card p{font-size:14px;line-height:1.6;color:var(--muted-foreground,#a1a1aa);margin:5px 0}.ds-scope{display:block;font-size:11px;margin-top:6px}.ds-links{display:grid;grid-template-columns:1fr 1fr;gap:0 24px;margin:18px 0 22px}.ds-links a{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 0;border-bottom:1px solid var(--border-ui,#323237);font-size:13px;color:var(--foreground,#f4f4f5);text-decoration:none}.ds-links svg{flex-shrink:0}.ds-links a:hover{color:var(--ring,#b9b4f5)}.ds-focus:focus-visible{outline:2px solid var(--ring,#b9b4f5);outline-offset:3px}"
+    },
+    {
+      "name": "Workspace Section Switcher",
+      "kind": "nav",
+      "description": "The homepage preview's three pressed-state controls; separate from the builder's four-step navigation.",
+      "html": "<div class=\"ds-switcher\" role=\"group\" aria-label=\"Workspace preview sections\"><button class=\"ds-focus\" aria-pressed=\"false\">Identity</button><button class=\"ds-focus\" aria-pressed=\"true\">Show</button><button class=\"ds-focus\" aria-pressed=\"false\">Launch</button></div>",
+      "css": ".ds-switcher{display:flex;gap:6px;padding:4px;background:var(--background,#111113);border-radius:8px}.ds-switcher button{flex:1;display:flex;align-items:center;justify-content:center;min-height:36px;padding:8px;border:0;border-radius:8px;background:transparent;color:var(--muted-foreground,#a1a1aa);font:500 12px/1.4 \"ACP Grotesk\",sans-serif;cursor:pointer;transition:background .15s}.ds-switcher button[aria-pressed=true],.ds-switcher button:hover{background:var(--secondary,#27272b);color:var(--foreground,#f4f4f5)}.ds-focus:focus-visible{outline:2px solid var(--ring,#b9b4f5);outline-offset:3px}@media(max-width:440px){.ds-switcher button{white-space:nowrap}}@media(prefers-reduced-motion:reduce){.ds-switcher button{transition:none}}"
+    },
+    {
+      "name": "Creator Steps",
+      "kind": "nav",
+      "refersTo": "creator-step",
+      "description": "Four equal columns retain all creator steps with numbered selected state.",
+      "html": "<nav class=\"ds-steps\" aria-label=\"Creation steps\"><a class=\"ds-focus\" href=\"#character\" aria-current=\"page\"><span>1</span>Character</a><a class=\"ds-focus\" href=\"#voice\"><span>2</span>Voice &amp; setting</a><a class=\"ds-focus\" href=\"#show\"><span>3</span>Show</a><a class=\"ds-focus\" href=\"#launch\"><span>4</span>Launch</a></nav>",
+      "css": ".ds-steps{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));padding:0 24px;border-bottom:1px solid var(--border-ui,#323237);background:var(--card,#1b1b1f)}.ds-steps a{display:flex;align-items:center;justify-content:center;gap:8px;min-height:65px;padding:12px 0;border:0;border-bottom:2px solid transparent;color:var(--muted-foreground,#a1a1aa);font:400 12px/1.6 \"ACP Grotesk\",sans-serif;text-decoration:none}.ds-steps a span{display:grid;place-items:center;width:20px;height:20px;border-radius:50%;background:var(--secondary,#27272b);font-size:10px;flex-shrink:0}.ds-steps a[aria-current=page]{color:var(--foreground,#f4f4f5);border-bottom-color:var(--ring,#b9b4f5)}.ds-steps a[aria-current=page] span{background:var(--ring,#b9b4f5);color:#222029}.ds-steps a:hover{color:var(--foreground,#f4f4f5)}.ds-focus:focus-visible{outline:2px solid var(--ring,#b9b4f5);outline-offset:3px}@media(max-width:1000px){.ds-steps{padding:0 14px}}@media(max-width:780px){.ds-steps{padding:0 12px}.ds-steps a{gap:6px;font-size:11px;min-height:60px}}@media(max-width:700px){.ds-steps a{flex-direction:column}}@media(max-width:440px){.ds-steps a{font-size:10px;padding:10px 0}}"
+    }
+  ],
+  "narrative": {
+    "northStar": "The AI Creator Studio",
+    "overview": "ACP pairs a calm charcoal workspace with a selective family of pearl and silver studio images. White actions, quiet periwinkle selection and aligned shadcn controls keep human creative control clear. This system covers the ACP homepage, launchpad, creator dashboard, token directory and browser broadcast studio family; the HER collective retains its separate visual world.\n\nThe imagery gives the brand physical presence while scripts, identity fields, settings and next actions remain semantic, editable UI. Sculptures are abstract brand material or blank-preview placeholders. Character images belong to the creator's references or generated work, and the four setting photographs depict unoccupied places.",
+    "keyCharacteristics": [
+      "Charcoal layers and fine strokes define working surfaces.",
+      "White actions and restrained periwinkle selection establish hierarchy.",
+      "Pearl sculpture is placed selectively; controls remain quiet.",
+      "Locally hosted geometric typography uses distinct display and tool scales.",
+      "Four visible creator steps, one Continue action and explicit local save state."
+    ],
+    "rules": [
+      {
+        "name": "The Quiet Accent Rule",
+        "body": "Use periwinkle to identify selection, focus and brief emphasis. Keep primary actions white and ordinary explanation neutral.",
+        "section": "colors"
+      },
+      {
+        "name": "The One Family Rule",
+        "body": "Use ACP Grotesk for headings, prose and controls. Establish hierarchy with size, weight and spacing, while preserving monospace for existing transaction data.",
+        "section": "typography"
+      },
+      {
+        "name": "The Scoped Heading Rule",
+        "body": "Apply the large homepage section scale only to its copy column. Keep the editable workspace heading at 24px; nested tool headings must not inherit display styling.",
+        "section": "typography"
+      },
+      {
+        "name": "The Tonal Depth Rule",
+        "body": "Use tone and fine borders for stationary work surfaces. Reserve the existing library elevation for option menus and the physical shading for raster imagery.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do use charcoal surfaces, white actions and quiet periwinkle selection across the scoped ACP family.",
+      "Do preserve the large brand-heading scale and the smaller 24px editable-workspace title as separate roles.",
+      "Do place the pearl imagery selectively and keep all text and actions semantic and code-owned.",
+      "Do keep four creator steps visible and retain one Continue action with quieter footer utilities.",
+      "Do distinguish device saving, wallet Sync, provider readiness, prepared transactions and confirmed launches.",
+      "Do preserve the generated mark, companion imagery and unoccupied settings with their recorded crops and provenance.",
+      "Do retain native disclosures, visible keyboard focus, reduced motion and explicit paid/wallet/broadcast controls."
+    ],
+    "donts": [
+      "Don't restore the rejected signal-green palette or angular mark, or add decorative human portraits to ACP.",
+      "Don't let section display styles enlarge nested editor headings.",
+      "Don't present abstract sculpture or setting guides as generated character output.",
+      "Don't add decorative kickers, eyebrows, glyph action icons or inherited hard offset shadows.",
+      "Don't add coin-banner controls or expose the fixed ten-minute preparation target as a buffer selector.",
+      "Don't treat local saves, queued renders or accepted transport as wallet saves, finished output or verified public playback.",
+      "Don't extend this scoped ACP system to the HER collective without a separate decision."
+    ]
+  }
+}

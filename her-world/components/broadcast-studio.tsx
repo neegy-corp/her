@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
+import { Video, ArrowLeft, ArrowUpRight } from "lucide-react";
 import { ShowRunner, type RenderedClip } from "@/lib/show-runner";
 import { ContinuousShowRunner } from "@/lib/continuous-show";
 import { measureMediaBuffer } from "@/lib/media-buffer";
@@ -537,7 +538,7 @@ function Studio({ id }: { id: string }) {
             <p>Play the show. Hear from chat. Let the next scene unfold.</p>
           </div>
           <a href={`/create/${id}/show`} className="lp-text-link">
-            ← Back to creation
+            <ArrowLeft size={14} aria-hidden="true" /> Back to creation
           </a>
         </div>
         <div className="acp-live-grid">
@@ -560,7 +561,7 @@ function Studio({ id }: { id: string }) {
               />
               {!active && !starting && (
                 <div className="acp-program-empty">
-                  <span>✳</span>
+                  <Video size={42} strokeWidth={1.4} aria-hidden="true" />
                   <strong>Your show starts here.</strong>
                   <p>
                     Prepare the scenes, connect your coin’s stream, then go
@@ -624,7 +625,7 @@ function Studio({ id }: { id: string }) {
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                Open this coin on pump.fun ↗
+                Open this coin on pump.fun <ArrowUpRight size={14} aria-hidden="true" />
               </a>
             )}
             <label>
@@ -681,7 +682,7 @@ function Studio({ id }: { id: string }) {
                 ? "Connecting…"
                 : connected
                   ? "Stream connected"
-                  : "Go Live ↗"}
+                  : <>Go Live <ArrowUpRight size={14} aria-hidden="true" /></>}
             </button>
             <div className="acp-live-actions">
               <button

@@ -1,111 +1,43 @@
 import Link from "next/link";
+import { ArrowRight } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { AcpNav, AcpFooter } from "@/components/acp-nav";
+import CreatorWorkspacePreview from "@/components/creator-workspace-preview";
 import "@/components/launchpad.css";
 import "@/components/acp-pages.css";
+import "@/components/studio-theme.css";
 export default function Page() {
   return (
-    <main className="lp acp-pages">
+    <main className="lp acp-pages acp-home">
       <AcpNav />
-      <section className="acp-home-hero">
-        <div>
-          <span className="lp-kicker">THE AI CHARACTER LAUNCHPAD</span>
-          <h1>
-            Give the internet
-            <br />
-            <em>someone to watch.</em>
-          </h1>
-          <p>
-            Your images. Your scripts. Your character’s next scene.
-            <br />
-            Build an AI video show with a coin of its own.
-          </p>
-          <div className="lp-hero-actions">
-            <Link className="lp-primary" href="/create">
-              Create a character ↗
-            </Link>
-            <Link className="lp-text-link" href="/tokens">
-              Explore tokens →
-            </Link>
-          </div>
-          <span className="acp-footnote">
-            Creation is open. Video generation and live launch require connected
-            services.
-          </span>
-        </div>
-        <div className="acp-storyboard" aria-label="Character show workflow">
-          <div className="acp-film-top">
-            <span>YOUR NEXT SHOW</span>
-            <span>01—04</span>
-          </div>
-          <div className="acp-film-main">
-            <span className="acp-star">✳</span>
-            <span>
-              CAST THE
-              <br />
-              <em>unexpected.</em>
-            </span>
-          </div>
-          <ol>
-            <li>
-              <b>01</b> Reference images <span>THE FACE</span>
-            </li>
-            <li>
-              <b>02</b> Script + camera direction <span>THE SCENE</span>
-            </li>
-            <li>
-              <b>03</b> Generated video clips <span>THE SHOW</span>
-            </li>
-            <li>
-              <b>04</b> Chat shapes what’s next <span>THE TWIST</span>
-            </li>
-          </ol>
-          <div className="acp-film-bottom">
-            YOU DIRECT. THE CHARACTER PERFORMS. ↗
+      <section className="brand-hero">
+        <img className="brand-hero-art" src="/images/acp-v2/hero.webp" alt="" fetchPriority="high" />
+        <div className="brand-hero-inner">
+          <div className="brand-hero-copy">
+            <h1>Your character.<br /><span>Your show.</span></h1>
+            <p>Create an AI personality, direct their videos, and bring them to an audience.</p>
+            <div className="creator-hero-actions">
+              <Button asChild><Link href="/create">Create character <ArrowRight size={16} /></Link></Button>
+              <Button variant="outline" asChild><Link href="/developer">Open studio</Link></Button>
+            </div>
           </div>
         </div>
       </section>
-      <section className="acp-process">
-        <div>
-          <span className="lp-kicker">FROM REFERENCE TO PERFORMANCE</span>
-          <h2>
-            A face is just
-            <br />
-            <em>the beginning.</em>
-          </h2>
+      <section className="brand-workspace">
+        <div className="brand-workspace-copy">
+          <h2>Direct their<br /> first scene.</h2>
+          <p>Give them a point of view. Write their opening line. Take it into the studio.</p>
+          <a href="#creator-preview">Try the workspace <ArrowRight size={16} /></a>
         </div>
-        <div className="acp-process-copy">
-          <p>
-            Keep the same character across expressive performances, new settings
-            and different camera angles. Upload reference images, then direct
-            each clip with dialogue, action and a scene.
-          </p>
-          <p>
-            Arrange the show, leave room for chat between clips, and let
-            audience suggestions inspire the next generated scene. Your coin’s
-            profile picture and banner stay separate from the character
-            references.
-          </p>
-          <Link className="lp-text-link" href="/create">
-            Start directing →
-          </Link>
-        </div>
+        <div id="creator-preview"><CreatorWorkspacePreview /></div>
       </section>
-      <section className="acp-launch-callout">
+      <section className="brand-discovery">
+        <img src="/images/acp-v2/discovery.webp" alt="" loading="lazy" />
         <div>
-          <span className="lp-kicker">THE ACP DIRECTORY</span>
-          <h2>
-            Every launch.
-            <br />
-            <em>One place.</em>
-          </h2>
-          <p>
-            Browse confirmed ACP-created tokens and open their coin pages on
-            pump.fun.
-          </p>
+          <h2>Meet the<br /> characters.</h2>
+          <p>Browse confirmed launches and their pump.fun pages.</p>
+          <Button variant="outline" asChild><Link href="/tokens">Explore launches <ArrowRight size={16} /></Link></Button>
         </div>
-        <Link className="lp-primary" href="/tokens">
-          Explore tokens ↗
-        </Link>
       </section>
       <AcpFooter />
     </main>

@@ -1,0 +1,7 @@
+Use case: logo-brand
+Asset type: compact standalone ACP brand mark.
+Primary request: create one distinctive, exceptionally simple white geometric brand symbol for Artificial Character Protocol. An abstract interlocking A and C, or character doorway, expressed with exactly two or three bold flat solid shapes. Suggest an open portal and a forward character silhouette through negative space, without depicting a person. Compact, balanced, confident asymmetrical silhouette, crisp edges and broad shapes readable when reduced to 32 pixels.
+Style: flat vector-like graphic, pure white #fafafa only, no outline, no gradient, no texture, no shadow or 3D.
+Composition: square image, one centered mark occupying approximately 78 percent of the canvas; no text of any kind.
+Background: genuinely transparent alpha background.
+Avoid: aperture blades, gear, network nodes, circles connected by lines, people, faces, wordmark, letters written as text, border, rounded tile, decorative sparkles, watermark. Produce only the mark on transparency.

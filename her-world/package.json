@@ -6,6 +6,8 @@
     "node": ">=22.13.0"
   },
   "scripts": {
+    "dev:local": "node node_modules/next/dist/bin/next dev --webpack --hostname 127.0.0.1 --port 5180",
+    "build:local": "node node_modules/next/dist/bin/next build --webpack",
     "install:ci": "node scripts/install-ci.mjs",
     "dev": "node scripts/run-framework.mjs dev",
     "build": "node scripts/run-framework.mjs build",

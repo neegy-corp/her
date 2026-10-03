@@ -1,0 +1,7 @@
+Use case: photorealistic-natural
+Asset type: reusable landscape creator setting for ACP show scene selection.
+Scene: a minimalist unoccupied cafe corner. Warm matte plaster walls, one large dark sage-green painted window frame, gentle afternoon sunlight. A simple small wooden cafe table at the edge, simple bench along a wall, no clutter or menus; the central foreground remains open.
+Composition: landscape 16:9, eye-level, calm editorial interior photograph using a natural 35mm lens. Intentional clear empty central foreground where a character could later be composited. Balanced broad planes, few objects, moderate depth, no extreme wide-angle distortion.
+Lighting: diffused afternoon warmth, subtle window shadows, quiet cream plaster with green architectural accent; subdued natural color and no neon.
+Materials: tactile plaster, worn green painted wood frame, warm plain wood furniture.
+Constraints: absolutely no people or human figures, no faces, no mannequins, no text, no signage, no logos, no watermark. No UI chrome, card border, rounded corners, or vignette. Clean simple atmosphere, restrained detail, straight-on eye-level composition. This is a physical environment photograph, not a software screen.

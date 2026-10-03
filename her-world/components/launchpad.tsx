@@ -22,6 +22,7 @@ import {
   Plus,
 } from "lucide-react";
 import { WalletRoot, useWallet } from "./wallet";
+import { AcpNav, AcpFooter } from "./acp-nav";
 import { shortWallet } from "@/lib/catalog";
 import {
   newDraft,
@@ -38,6 +39,13 @@ import "./launchpad.css";
 import "./acp-pages.css";
 import ShowEditor from "./show-editor";
 import CoinArtwork from "./coin-artwork";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ACP_FEE_WALLET, ACP_QUOTE_MINT } from "@/lib/acp-config";
 import { DRAFT_STORE, creatorPath, readLocalDrafts, keepDraft, type CreatorStep } from "@/lib/creator-navigation";
 
@@ -45,10 +53,8 @@ const STORE = DRAFT_STORE;
 type Step = CreatorStep;
 const steps = [
   { id: "character", label: "Character", icon: Palette },
-  { id: "personality", label: "Voice", icon: Mic2 },
-  { id: "scene", label: "The scene", icon: Monitor },
-  { id: "show", label: "The show", icon: Layers3 },
-  { id: "artwork", label: "Coin artwork", icon: Palette },
+  { id: "personality", label: "Voice & setting", icon: Mic2 },
+  { id: "show", label: "Show", icon: Layers3 },
   { id: "launch", label: "Launch", icon: Radio },
 ] as const;
 type CloudDraft = CharacterDraft & {
@@ -329,53 +335,22 @@ function Home({ characterId, initialStep = "character" }: EditorProps) {
       );
     });
   }
+  const activeStep = step === "scene" ? "personality" : step === "artwork" ? "launch" : step;
+  const stepIndex = steps.findIndex(s => s.id === activeStep);
+  const nextStep = steps[stepIndex + 1];
   const visualCurrent =
     !!draft?.image && draft.imageFingerprint === visualFingerprint(draft);
   return (
     <main className="lp acp-pages">
-      <header className="lp-header">
-        <a className="lp-logo" href="/" aria-label="ACP launchpad">
-          acp<span>®</span>
-          <small>ARTIFICIAL CHARACTER PROTOCOL</small>
-        </a>
-        <nav aria-label="Main navigation">
-          <a href="/create">Create</a>
-          <a href="/tokens">Tokens</a>
-          <a href="/developer" onClick={e => { if (!persistCurrent()) e.preventDefault(); }}>Developer</a>
-          <a href="/collective">
-            HER collective <ArrowUpRight size={13} />
-          </a>
-        </nav>
-        <button
+      <AcpNav active="create" action={<Button
           className="lp-wallet"
           onClick={() => (viewer.wallet ? void disconnect() : connect())}
         >
           <Wallet size={15} />
           {viewer.wallet ? shortWallet(viewer.wallet) : "Connect wallet"}
-        </button>
-      </header>
+        </Button>} />
       <section className="lp-studio" id="studio" ref={studio}>
-        <div className="lp-section-top">
-          <div>
-            <span className="lp-kicker">THE CHARACTER STUDIO / 001</span>
-            <h1 className="acp-studio-title">
-              {step === "character" ? <>Create your <em>character.</em></> : <>{draft?.name || "Your character"}<em> / {steps.find(s => s.id === step)?.label}</em></>}
-            </h1>
-            <p className="acp-studio-intro">
-              Start with reference images. Direct the action, write the script,
-              then build the show.
-            </p>
-          </div>
-          <div className="lp-save-status">
-            <button className="lp-text-link" onClick={() => begin()}>
-              New character <Plus size={14} />
-            </button>
-            <span className={localSaved ? "saved" : ""} />
-            {localSaved
-              ? "Draft saved on this device"
-              : "Preparing your workspace"}
-          </div>
-        </div>
+        <div className="lp-section-top"><div><h1 className="acp-studio-title">{draft?.name || "New character"}</h1><p className="acp-studio-intro">Make it yours. Bring it to life.</p></div><div className="lp-save-status"><Badge variant="secondary" title="Saved on this device">{localSaved ? <><Check size={13} /> Saved locally</> : "Saving locally…"}</Badge><Button variant="ghost" size="sm" onClick={begin}><Plus size={14} /> New character</Button></div></div>
         <div className="lp-workspace">
           <div className="lp-editor">
             <div
@@ -383,15 +358,15 @@ function Home({ characterId, initialStep = "character" }: EditorProps) {
               role="navigation"
               aria-label="Character editor"
             >
-              {steps.map((s) => (
+              {steps.map((s, index) => (
                 <a
                   id={`tab-${s.id}`}
-                  aria-current={step === s.id ? "page" : undefined}
+                  aria-current={activeStep === s.id ? "page" : undefined}
                   key={s.id}
                   href={draft ? creatorPath(draft.id, s.id) : "#"}
                   onClick={e => { if (!draft || !persistCurrent()) e.preventDefault(); }}
                 >
-                  <s.icon size={17} />
+                  <span className="lp-step-number">{index + 1}</span>
                   <span>{s.label}</span>
                 </a>
               ))}
@@ -403,13 +378,13 @@ function Home({ characterId, initialStep = "character" }: EditorProps) {
                 className="lp-form"
                 id="studio-panel"
                 role="region"
-                aria-labelledby={`tab-${step}`}
+                aria-labelledby={`tab-${activeStep}`}
               >
                 {step === "character" && (
                   <>
                     <FormTitle
                       kicker="START WITH A SPARK"
-                      title="Who are we meeting?"
+                      title="Create your character"
                     />
                     <div className="lp-field-row">
                       <Field
@@ -419,20 +394,9 @@ function Home({ characterId, initialStep = "character" }: EditorProps) {
                         onChange={(v) => edit({ name: v })}
                         placeholder="Give them a name"
                       />
-                      <Field
-                        label="Coin ticker"
-                        value={draft.symbol}
-                        maxLength={10}
-                        onChange={(v) =>
-                          edit({
-                            symbol: v.toUpperCase().replace(/[^A-Z0-9]/g, ""),
-                          })
-                        }
-                        prefix="$"
-                      />
                     </div>
                     <Field
-                      label="The one-line introduction"
+                      label="Short bio"
                       value={draft.description}
                       maxLength={500}
                       onChange={(v) => edit({ description: v })}
@@ -444,22 +408,10 @@ function Home({ characterId, initialStep = "character" }: EditorProps) {
                       onChange={(v) => edit({ appearance: v })}
                       multiline
                       rows={5}
-                      hint="Be specific: age, hair, wardrobe, expression. Original adult characters work best."
+                      hint="Age, hair, outfit and expression."
                     />
-                    <label className="lp-check">
-                      <input
-                        type="checkbox"
-                        checked={draft.rightsConfirmed}
-                        onChange={(e) =>
-                          edit({ rightsConfirmed: e.target.checked })
-                        }
-                      />
-                      <span>
-                        This is an original character, or I have permission to
-                        use this likeness.
-                      </span>
-                    </label>
-                    <button
+                    <div className="lp-check"><Checkbox id="character-rights" checked={draft.rightsConfirmed} onCheckedChange={checked => edit({rightsConfirmed: checked === true})} /><Label htmlFor="character-rights">I own this character or have permission to use their likeness.</Label></div>
+                    <Button
                       className="lp-primary lp-wide"
                       disabled={
                         !!busy || !draft.rightsConfirmed || !status.generation
@@ -473,138 +425,41 @@ function Home({ characterId, initialStep = "character" }: EditorProps) {
                       )}{" "}
                       {busy === "Generating portrait"
                         ? "Creating your portrait…"
-                        : "Generate character portrait"}
-                    </button>
-                    {status.imageProvider === "higgsfield" && <button className="lp-secondary" disabled={!!busy} onClick={() => void task("Checking portrait", () => portraitRequest("GET"))}>Check portrait {portraitStatus && `· ${portraitStatus}`}</button>}
+                        : "Generate portrait"}
+                    </Button>
+                    {status.imageProvider === "higgsfield" && <Button variant="outline" className="lp-secondary" disabled={!!busy} onClick={() => void task("Checking portrait", () => portraitRequest("GET"))}>Check portrait {portraitStatus && `· ${portraitStatus}`}</Button>}
                     {!status.generation && (
                       <p className="lp-field-note">
-                        Generation is opening soon. Design, save and export your
-                        character now.
+                        Connect your wallet and generation services to create images.
                       </p>
                     )}
-                    <button
-                      className="lp-secondary"
+                    <Button
+                      variant="outline" className="lp-secondary"
                       onClick={() => setStep("show")}
                     >
-                      Upload character reference photos <ArrowRight size={16} />
-                    </button>
-                    <button
-                      className="lp-next"
-                      onClick={() => setStep("personality")}
-                    >
-                      Next: personality & voice <ArrowRight size={16} />
-                    </button>
+                      Use reference photos <ArrowRight size={16} />
+                    </Button>
                   </>
                 )}
                 {step === "personality" && (
                   <>
                     <FormTitle
                       kicker="A FACE IS ONLY THE START"
-                      title="Give them a point of view."
+                      title="Voice & personality"
                     />
                     <Field
-                      label="Personality & conversation style"
+                      label="Personality"
                       value={draft.personality}
                       maxLength={2000}
                       onChange={(v) => edit({ personality: v })}
                       multiline
                       rows={5}
-                      hint="What do they love? How do they joke? How should they respond to chat?"
+                      hint="Their interests, attitude and way of talking."
                     />
-                    <label className="lp-field-label">
-                      Choose a voice <span>Listen before you choose</span>
-                    </label>
-                    <div className="lp-voices">
-                      {voices.map((v) => (
-                        <div
-                          key={v.id}
-                          className={draft.voice === v.id ? "chosen" : ""}
-                        >
-                          <button
-                            className="lp-voice-select"
-                            aria-pressed={draft.voice === v.id}
-                            onClick={() => edit({ voice: v.id })}
-                          >
-                            <span>{v.name}</span>
-                            <small>{v.style}</small>
-                            {draft.voice === v.id && <Check size={14} />}
-                          </button>
-                          <button
-                            className="lp-voice-play"
-                            aria-label={`${activeVoice === v.id ? "Stop" : "Play"} ${v.name} voice sample`}
-                            onClick={() => playVoice(v.id)}
-                          >
-                            {activeVoice === v.id ? "■" : <Volume2 size={15} />}
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                    <p className="lp-field-note">
-                      Tavus speech clips use this stock voice. Higgsfield motion
-                      clips generate their own audio; these samples do not select
-                      a Higgsfield voice.
-                    </p>
-                    <button
-                      className="lp-next"
-                      onClick={() => setStep("scene")}
-                    >
-                      Next: set the scene <ArrowRight size={16} />
-                    </button>
+                    <div className="lp-voice-compact"><div><Label htmlFor="voice-choice">Voice</Label><Select value={draft.voice} onValueChange={voice => edit({voice: voice as CharacterDraft["voice"]})}><SelectTrigger id="voice-choice"><SelectValue>{voices.find(v => v.id === draft.voice)?.name}</SelectValue></SelectTrigger><SelectContent className="acp-popover">{voices.map(v => <SelectItem key={v.id} value={v.id}>{v.name} · {v.style}</SelectItem>)}</SelectContent></Select></div><Button variant="outline" aria-label={activeVoice === draft.voice ? "Stop voice sample" : "Play voice sample"} onClick={() => playVoice(draft.voice)}><Volume2 size={16} />{activeVoice === draft.voice ? "Stop" : "Listen"}</Button></div><details className="lp-details"><summary>About voices</summary><p>Voice samples apply to Tavus speech clips. Motion clips generate their own audio.</p></details><ScenePicker draft={draft} onChange={edit} busy={!!busy} onGenerate={() => void generate()} generationAvailable={status.generation} />
                   </>
                 )}
-                {step === "scene" && (
-                  <>
-                    <FormTitle
-                      kicker="EVERY CHARACTER HAS A WORLD"
-                      title="Where do they belong?"
-                    />
-                    <div className="lp-scenes">
-                      {scenes.map((s) => (
-                        <button
-                          key={s.id}
-                          aria-pressed={draft.scene === s.id}
-                          onClick={() =>
-                            edit({ scene: s.id, background: s.prompt })
-                          }
-                        >
-                          <span style={{ background: s.color }}>
-                            <span className={`lp-scene-drawing ${s.id}`} />
-                          </span>
-                          <strong>{s.name}</strong>
-                          {draft.scene === s.id && <Check size={14} />}
-                        </button>
-                      ))}
-                    </div>
-                    <Field
-                      label="Prompt the background"
-                      value={draft.background}
-                      maxLength={1000}
-                      onChange={(v) => edit({ background: v, scene: "custom" })}
-                      multiline
-                      rows={5}
-                      hint="Describe the room, lighting, time of day and mood. The generated portrait includes this setting."
-                    />
-                    <button
-                      className="lp-primary lp-wide"
-                      onClick={() => void generate()}
-                      disabled={
-                        !!busy || !draft.rightsConfirmed || !status.generation
-                      }
-                    >
-                      <Sparkles size={17} />
-                      {busy === "Generating portrait"
-                        ? "Generating your scene…"
-                        : "Generate portrait in this scene"}
-                    </button>
-                    <p className="lp-field-note">
-                      Scene tiles are mood sketches. The portrait changes after
-                      a successful generation.
-                    </p>
-                    <button className="lp-next" onClick={() => setStep("show")}>
-                      Next: write the show <ArrowRight size={16} />
-                    </button>
-                  </>
-                )}
+                {step === "scene" && <ScenePicker draft={draft} onChange={edit} busy={!!busy} onGenerate={() => void generate()} generationAvailable={status.generation} />}
                 {step === "show" && (
                   <ShowEditor
                     key={draft.id}
@@ -612,42 +467,28 @@ function Home({ characterId, initialStep = "character" }: EditorProps) {
                     onChange={(show) => edit({ show })}
                     onNotice={setNotice}
                     onImage={(image) => edit(image)}
+                    servicesAvailable={!!viewer.wallet && status.storage}
                   />
                 )}
-                {step === "artwork" && <><FormTitle kicker="THE TOKEN IDENTITY" title="Give the coin its own look." /><CoinArtwork draft={draft} onChange={edit} /><button className="lp-next" onClick={() => setStep("launch")}>Continue to launch <ArrowRight size={16} /></button></>}
+                {step === "artwork" && <><FormTitle kicker="THE TOKEN IDENTITY" title="Give the coin its own look." /><CoinArtwork draft={draft} onChange={edit} servicesAvailable={!!viewer.wallet && status.storage} /><Button variant="ghost" className="lp-next" onClick={() => setStep("launch")}>Continue to launch <ArrowRight size={16} /></Button></>}
                 {step === "launch" && (
                   <>
                     <FormTitle
                       kicker="FROM AN IDEA TO A PRESENCE"
-                      title="Your character, out in the world."
+                      title="Launch your character"
                     />
-                    <div className="lp-launch-summary">
-                      <img
-                        src={draft.image || samplePortrait(draft)}
-                        alt="Character preview"
+                    <div className="lp-launch-profile">                      <Field
+                        label="Coin ticker"
+                        value={draft.symbol}
+                        maxLength={10}
+                        onChange={(v) =>
+                          edit({
+                            symbol: v.toUpperCase().replace(/[^A-Z0-9]/g, ""),
+                          })
+                        }
+                        prefix="$"
                       />
-                      <div>
-                        <h4>{draft.name || "Untitled character"}</h4>
-                        <p>
-                          ${draft.symbol || "TICKER"} ·{" "}
-                          {voices.find((v) => v.id === draft.voice)?.name}
-                        </p>
-                        <small>
-                          {draft.image
-                            ? "Generated portrait"
-                            : "Example artwork — generate your own"}
-                        </small>
-                      </div>
-                    </div>
-                    <a className="lp-text-link" href={creatorPath(draft.id, "artwork")} onClick={e => { if (!persistCurrent()) e.preventDefault(); }}>Edit coin PFP & banner ↗</a>
-                    <a
-                      className="lp-text-link"
-                      href={`/studio/${draft.id}`}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      Set up stream & Go Live ↗
-                    </a>
+<CoinArtwork draft={draft} onChange={edit} servicesAvailable={!!viewer.wallet && status.storage} /></div>
                     <div className="lp-pair-info">
                       <strong>NVDAX pair · 1% ACP creator fee</strong>
                       <p>
@@ -661,7 +502,7 @@ function Home({ characterId, initialStep = "character" }: EditorProps) {
                         target="_blank"
                         rel="noreferrer"
                       >
-                        Pair eligibility and issuer terms ↗
+                        Pair eligibility and issuer terms <ArrowUpRight size={14} aria-hidden="true" />
                       </a>
                     </div>
                     <ol className="lp-launch-checklist">
@@ -675,22 +516,7 @@ function Home({ characterId, initialStep = "character" }: EditorProps) {
                         }
                         status={visualCurrent ? "Ready" : "Draft"}
                       />
-                      <LaunchStep
-                        number="02"
-                        title="Optional: train a talking face"
-                        text={
-                          faceStatus === "draft"
-                            ? "For Tavus speech clips. Motion videos and coin creation do not require this."
-                            : `Training status: ${faceStatus}`
-                        }
-                        status={
-                          faceStatus === "ready"
-                            ? "Ready"
-                            : status.faces
-                              ? "Available"
-                              : "Soon"
-                        }
-                      />
+                      <LaunchStep number="02" title="Profile picture" text="A square image for your coin." status={draft.coinPfp ? "Ready" : "Add image"} />
                       <LaunchStep
                         number="03"
                         title="Create the coin on pump.fun"
@@ -703,16 +529,9 @@ function Home({ characterId, initialStep = "character" }: EditorProps) {
                               : "Soon"
                         }
                       />
-                      <LaunchStep
-                        number="04"
-                        title="Start the live character"
-                        text="A dedicated broadcaster and pump.fun stream access are required."
-                        status="Not connected"
-                      />
                     </ol>
-                    <div className="lp-launch-buttons">
-                      <button
-                        className="lp-secondary"
+                    <details className="lp-details"><summary>Talking face (optional)</summary><p>Train a face for scripted speech clips.</p>                      <Button
+                        variant="outline" className="lp-secondary"
                         disabled={
                           !!busy ||
                           !visualCurrent ||
@@ -722,17 +541,19 @@ function Home({ characterId, initialStep = "character" }: EditorProps) {
                         onClick={() => void train()}
                       >
                         Train live face
-                      </button>
+                      </Button>
                       {faceStatus !== "draft" && (
-                        <button
-                          className="lp-secondary"
+                        <Button
+                          variant="outline" className="lp-secondary"
                           disabled={!!busy}
                           onClick={() => void checkFace()}
                         >
                           Check training
-                        </button>
+                        </Button>
                       )}
-                      <button
+</details>
+                    <div className="lp-launch-buttons">
+                      <Button
                         className="lp-primary"
                         disabled={
                           !!busy ||
@@ -744,7 +565,7 @@ function Home({ characterId, initialStep = "character" }: EditorProps) {
                         onClick={() => void prepare()}
                       >
                         Review coin launch <ArrowUpRight size={15} />
-                      </button>
+                      </Button>
                     </div>
                     {coin.signature && (
                       <div className="lp-inline">
@@ -753,14 +574,14 @@ function Home({ characterId, initialStep = "character" }: EditorProps) {
                           target="_blank"
                           rel="noreferrer"
                         >
-                          View transaction ↗
+                          View transaction <ArrowUpRight size={14} aria-hidden="true" />
                         </a>
-                        <button
+                        <Button
                           onClick={() => void checkCoin()}
                           disabled={!!busy}
                         >
                           Check confirmation
-                        </button>
+                        </Button>
                       </div>
                     )}
                     {coin.mint && coin.status === "confirmed" && (
@@ -773,95 +594,14 @@ function Home({ characterId, initialStep = "character" }: EditorProps) {
                         Open your coin <ArrowUpRight size={16} />
                       </a>
                     )}
-                    <p className="lp-field-note">
-                      Creating a coin does not start a stream. Live publishing
-                      is unavailable until the broadcast service is connected.
-                    </p>
-                    <button className="lp-next" onClick={download}>
-                      Download character package <Download size={16} />
-                    </button>
+                    <p className="lp-field-note">Coin creation and broadcasting are separate. <a href={`/studio/${draft.id}`}>Open broadcast studio</a></p>
                   </>
                 )}
               </div>
             )}
-            <div className="lp-editor-footer">
-              <button
-                onClick={() => void saveCloud()}
-                disabled={!!busy || !draft || !status.storage}
-              >
-                <Save size={15} />
-                {busy === "Saving" ? "Saving…" : "Save to wallet"}
-              </button>
-              <button
-                onClick={download}
-                disabled={!draft}
-                aria-label="Download character package"
-              >
-                <Download size={16} />
-              </button>
-              <button
-                onClick={() => setShowHelp(!showHelp)}
-                aria-expanded={showHelp}
-              >
-                <CircleHelp size={16} />
-                <span>Need a hand?</span>
-              </button>
-            </div>
+            <div className="lp-editor-footer"><div className="lp-editor-utilities"><Button variant="ghost" size="sm" onClick={() => void saveCloud()} disabled={!!busy || !draft || !status.storage}><Save size={15} />{busy === "Saving" ? "Saving…" : "Sync"}</Button><Button variant="ghost" size="icon" onClick={download} disabled={!draft} aria-label="Download character package"><Download size={16} /></Button><Button variant="ghost" size="icon" onClick={() => setShowHelp(!showHelp)} aria-expanded={showHelp} aria-label="Builder help"><CircleHelp size={16} /></Button></div>{nextStep && <Button disabled={!!busy || !draft} onClick={() => setStep(nextStep.id)}>Continue <ArrowRight size={16} /></Button>}</div>
           </div>
-          <aside className="lp-preview">
-            <div className="lp-preview-head">
-              <span>
-                <span className="lp-preview-dot" /> CHARACTER PREVIEW
-              </span>
-              <span>9:16</span>
-            </div>
-            <div className="lp-preview-image">
-              <img
-                src={draft?.image || samplePortrait(draft)}
-                alt={
-                  draft?.image
-                    ? `Character reference for ${draft.name}`
-                    : "Upload or generate your character reference"
-                }
-              />
-              {busy === "Generating portrait" && (
-                <div className="lp-preview-busy">
-                  <LoaderCircle size={30} className="lp-spin" />
-                  <span>Making someone new.</span>
-                </div>
-              )}
-              <span className="lp-ai-label">AI CHARACTER</span>
-              <div className="lp-preview-caption">
-                <small>
-                  {draft?.image
-                    ? "YOUR CHARACTER REFERENCE"
-                    : "ADD YOUR REFERENCE"}
-                </small>
-                <h3>
-                  {draft?.name || "Your character"}
-                  <span>↗</span>
-                </h3>
-                <p>{draft?.description || "A new face for the internet."}</p>
-              </div>
-            </div>
-            <div className="lp-preview-meta">
-              <span>
-                <Mic2 size={14} />
-                {voices.find((v) => v.id === draft?.voice)?.name ||
-                  "Choose a voice"}
-              </span>
-              <span>
-                <Monitor size={14} />
-                {scenes.find((s) => s.id === draft?.scene)?.name ||
-                  "Custom scene"}
-              </span>
-            </div>
-            <p className="lp-preview-note">
-              {draft?.image && !visualCurrent
-                ? "Prompts changed. Generate a new portrait to apply them."
-                : "A still preview. No camera session or livestream is running."}
-            </p>
-          </aside>
+          <aside className="lp-preview"><div className="lp-preview-image">{draft?.image ? <img src={draft.image} alt={`Character reference for ${draft.name}`} /> : <div className="lp-preview-empty lp-preview-art"><img src="/images/acp-v2/studio.webp" alt="" /><p>Your character appears here</p></div>}{busy === "Generating portrait" && <div className="lp-preview-busy"><LoaderCircle size={28} className="lp-spin" /><span>Creating your portrait…</span></div>}</div><div className="lp-preview-caption"><h3>{draft?.name || "Your character"}</h3>{draft?.description && <p>{draft.description}</p>}</div><div className="lp-preview-meta"><span><Mic2 size={14} />{voices.find(v => v.id === draft?.voice)?.name || "Choose a voice"}</span><span><Monitor size={14} />{scenes.find(s => s.id === draft?.scene)?.name || "Custom setting"}</span></div>{draft?.image && !visualCurrent && <p className="lp-preview-note">Your look has changed. Regenerate to update the preview.</p>}</aside>
         </div>
         {showHelp && (
           <div className="lp-help">
@@ -880,7 +620,7 @@ function Home({ characterId, initialStep = "character" }: EditorProps) {
             role={error ? "alert" : "status"}
           >
             <span>{error || notice}</span>
-            <button
+            <Button
               aria-label="Dismiss message"
               onClick={() => {
                 setError("");
@@ -888,33 +628,24 @@ function Home({ characterId, initialStep = "character" }: EditorProps) {
               }}
             >
               <X size={16} />
-            </button>
+            </Button>
           </div>
         )}
       </section>
-      <footer className="lp-footer">
-        <a className="lp-logo" href="/">
-          acp<span>®</span>
-        </a>
-        <p>Invent a character. Give it a world.</p>
-        <a href="/collective">
-          The HER collective <ArrowUpRight size={13} />
-        </a>
-        <span>BUILT FOR THE INTERNET / 2026</span>
-      </footer>
+      <AcpFooter />
       <dialog
         className="lp-review"
         ref={modal}
         onCancel={() => setReview(null)}
         aria-labelledby="review-title"
       >
-        <button
+        <Button
           className="lp-close"
           aria-label="Close launch review"
           onClick={() => setReview(null)}
         >
           <X />
-        </button>
+        </Button>
         <span className="lp-kicker">SOLANA MAINNET / TRANSACTION REVIEW</span>
         <h2 id="review-title">Create ${draft?.symbol}?</h2>
         <p>
@@ -948,13 +679,13 @@ function Home({ characterId, initialStep = "character" }: EditorProps) {
             terms, and understand the transaction is permanent.
           </span>
         </label>
-        <button
+        <Button
           className="lp-primary lp-wide"
           disabled={!confirm || !!busy}
           onClick={() => void launch()}
         >
           Approve in wallet <ArrowUpRight size={17} />
-        </button>
+        </Button>
       </dialog>
     </main>
   );
@@ -963,10 +694,10 @@ function FormTitle({ kicker, title }: { kicker: string; title: string }) {
   return (
     <div className="lp-form-heading">
       <div>
-        <span className="lp-kicker">{kicker}</span>
+
         <h3>{title}</h3>
       </div>
-      <span className="lp-mini-symbol">✳</span>
+
     </div>
   );
 }
@@ -1015,11 +746,11 @@ function Field({
   const id = "lp-" + label.toLowerCase().replace(/[^a-z0-9]+/g, "-");
   return (
     <div className="lp-field">
-      <label htmlFor={id}>{label}</label>
+      <Label htmlFor={id}>{label}</Label>
       <div className={prefix ? "lp-input-prefix" : ""}>
         {prefix && <span>{prefix}</span>}
         {multiline ? (
-          <textarea
+          <Textarea
             id={id}
             value={value}
             onChange={(e) => onChange(e.target.value)}
@@ -1027,7 +758,7 @@ function Field({
             {...props}
           />
         ) : (
-          <input
+          <Input
             id={id}
             value={value}
             onChange={(e) => onChange(e.target.value)}
@@ -1054,7 +785,7 @@ function CharacterCard({
 }) {
   return (
     <article className="lp-character-card">
-      <button
+      <Button
         className="lp-card-image"
         onClick={action}
         aria-label={`Customize ${name}`}
@@ -1064,15 +795,17 @@ function CharacterCard({
         <span className="lp-card-arrow">
           <ArrowUpRight size={23} />
         </span>
-      </button>
+      </Button>
       <div className="lp-card-details">
         <small>{tag}</small>
         <h3>{name}</h3>
         <p>{description}</p>
-        <button onClick={action}>
+        <Button onClick={action}>
           Make it yours <ChevronRight size={14} />
-        </button>
+        </Button>
       </div>
     </article>
   );
 }
+
+function ScenePicker({draft, onChange, busy, onGenerate, generationAvailable}: {draft: CharacterDraft; onChange: (patch: Partial<CharacterDraft>) => void; busy: boolean; onGenerate: () => void; generationAvailable: boolean}) {return <section className="lp-setting-section"><h3>Choose a setting</h3><p className="lp-field-note">Start with a place, or describe your own.</p><div className="lp-scene-gallery">{scenes.map(scene => <Button variant="ghost" key={scene.id} className="lp-setting-card" aria-pressed={draft.scene === scene.id} onClick={() => onChange({scene: scene.id, background: scene.prompt})}><img src={`/images/acp/scene-${scene.id}.webp`} alt={`${scene.name} setting preview`} /><span>{scene.name}{draft.scene === scene.id && <Check size={14} />}</span></Button>)}</div><details className="lp-details lp-scene-custom"><summary>Customize setting</summary><Field label="Setting description" value={draft.background} maxLength={1000} onChange={background => onChange({background, scene: "custom"})} multiline rows={3} placeholder="A room, a time of day, a feeling…" /></details><Button variant="outline" disabled={busy || !draft.rightsConfirmed || !generationAvailable} onClick={onGenerate}><WandSparkles size={16} />Update portrait</Button><p className="lp-field-note">Setting previews guide the next generation.</p></section>;}

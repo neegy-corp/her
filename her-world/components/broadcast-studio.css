@@ -25,9 +25,9 @@
   align-items: start;
 }
 .acp-program {
-  background: #19382f;
-  color: #eff2df;
-  border: 1px solid #19382f;
+  background: #14201b;
+  color: var(--lp-ink);
+  border: 1px solid var(--lp-line);
   position: sticky;
   top: 24px;
 }
@@ -41,17 +41,17 @@
   letter-spacing: 0.12em;
 }
 .acp-program-label {
-  border-bottom: 1px solid #436450;
+  border-bottom: 1px solid var(--lp-line);
 }
 .acp-program canvas {
   display: block;
   width: 100%;
   max-height: 620px;
   object-fit: contain;
-  background: #143f32;
+  background: #14201b;
 }
 .acp-program-status {
-  border-top: 1px solid #436450;
+  border-top: 1px solid var(--lp-line);
   letter-spacing: 0;
   font-size: 12px;
 }
@@ -59,7 +59,7 @@
   font-size: 12px;
   line-height: 1.6;
   padding: 0 22px 18px;
-  color: #bed0b2;
+  color: var(--lp-muted);
   overflow-wrap: anywhere;
 }
 .acp-stream-setup {
@@ -122,8 +122,8 @@
   justify-content: center;
 }
 .acp-live-notice {
-  background: #e5ebda;
-  border-left: 3px solid #779061;
+  background: var(--lp-white);
+  border: 1px solid var(--lp-line);
   padding: 18px 20px;
   font-size: 13px;
   line-height: 1.7;
@@ -132,12 +132,12 @@
   margin: 6px 0;
 }
 .acp-live-error {
-  background: #f5e4de;
-  border: 1px solid #d9b6a8;
+  background: var(--lp-white);
+  border: 1px solid var(--lp-line);
   padding: 14px;
   font-size: 13px;
   line-height: 1.6;
-  color: #853f28;
+  color: #f4b4aa;
   overflow-wrap: anywhere;
 }
 .acp-program-status span {
@@ -188,7 +188,7 @@
   justify-content: center;
   text-align: center;
   padding: 35px;
-  color: #dae7c9;
+  color: var(--lp-ink);
 }
 .acp-program-empty > span {
   font-size: 72px;
@@ -202,5 +202,5 @@
   font-size: 13px;
   line-height: 1.8;
   max-width: 260px;
-  color: #b7c8af;
+  color: var(--lp-muted);
 }

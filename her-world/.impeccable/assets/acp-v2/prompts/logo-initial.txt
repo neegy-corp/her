@@ -1,0 +1,8 @@
+Use case: logo-brand
+Asset type: final compact ACP brand symbol for a dark interface; standalone transparent production logo.
+Primary request: draw one exceptionally refined custom lowercase single-storey a monogram as a single continuous broad white shape. Its rounded, nearly square bowl has a precise upright doorway-shaped counter and joins a simple broad right-hand stem. Rounded bends, controlled geometry, subtly asymmetric custom proportions, compact balanced silhouette. It should feel like a professional contemporary design studio identity, clear and distinct when viewed at 32 pixels. Make the inner negative space generous and clean. No interlocking letters. No angular A/C construction.
+Style/medium: flat vector-like graphic. The shape is uniformly pure white #ffffff, with only clean antialiased edge pixels. One solid silhouette, no contours inside the fill, no surface detail. No gradient, gray fill, texture, distress, noise, outline, bevel, 3D, shadow or glow.
+Composition: square canvas, centered standalone mark occupying 76 percent of canvas, generous even transparent margin. Only one mark, no alternatives or presentation sheet.
+Background: genuine transparent alpha, including the counter. Everything outside the white mark is fully transparent.
+Text: none; do not add a wordmark or any written letters outside the custom monogram.
+Avoid: stars, gears, neural nodes, connected circles, aperture blades, waveform equalizer, robot, people, faces, small details, random ornaments, watermark, border, tile, black background or checkerboard pixels. Only the white monogram on actual transparency.

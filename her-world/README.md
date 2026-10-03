@@ -1,4 +1,16 @@
-# HER — Characters & Stage
+# ACP — local creator studio
+
+This copy includes the latest ACP launchpad and a dark creator workspace redesign. The homepage lets you start an actual device draft with a name, personality and opening script. Generated decorative portraits were removed following the user's design direction.
+
+Run `npm run dev:local` from this directory and open `http://127.0.0.1:5180`. Run `npm run build:local` for the native Next.js production build. Space Grotesk is self-hosted under the OFL license in `public/fonts/OFL.txt`.
+
+Device drafts, the four visible creator steps, manual scene writing, show settings, local autosave and character-package export work without production credentials. The updated interface includes My studio, confirmed-launch discovery and the per-character broadcast controls. A disconnected directory is shown explicitly; this preview includes no invented launch records.
+
+Wallet-owned cloud saves, remote media uploads, AI scripts, portrait/video generation and coin creation require the relevant configured services. Broadcast needs an owned, confirmed coin, prepared videos and that coin's streaming access; verified public playback and unattended background workers remain outstanding. No production credentials are copied into this review checkout, and this UI work does not launch a coin or broadcast a stream. See [ACP-LAUNCHPAD.md](ACP-LAUNCHPAD.md) for the current feature and infrastructure record.
+
+## Earlier HER deployment record
+
+The notes below describe the earlier HER collective and deployment history. The current creator launchpad is described above and in ACP-LAUNCHPAD.md.
 
 Public browsing site with Olivia, Maya and Ivy system-face previews, Turnkey-powered external Solana wallet connection, Supabase PostgreSQL persistence, and host-managed stage requests. Burns and stage requests remain closed at launch. Wallet connection is enabled; no email or ChatGPT signup is used by the application.
 
@@ -61,3 +73,9 @@ For the local preview, build once and run `node scripts/preview.mjs`. This resol
 - Solana burns: https://solana.com/docs/tokens/basics/burn-tokens
 
 No Tavus, pump.fun stream, wallet private key or database credential is committed. Ignored local environment files and hosted secret storage contain runtime configuration. Use the separate HER streaming studio to broadcast.
+
+### Simplified creator UI
+
+The creator uses four visible steps and shadcn controls with four generated setting previews. Coin artwork is PFP-only. New drafts start with one blank opening scene. Continuous show preparation has a fixed ten-minute target; extra stream settings are in a disclosure. Legacy scene and artwork routes remain supported.
+
+The refreshed brand uses a white lowercase ACP monogram, a pearl-metal homepage hero, quiet abstract Discover artwork and a square studio accent. Images appear selectively across the homepage, directory and studio; the editor keeps its controls prominent. New imagery and exact prompts are recorded in `.impeccable/assets/acp-v2/manifest.json`; the four setting previews retain their provenance in `.impeccable/assets/acp/manifest.json`.

@@ -48,5 +48,12 @@ next-env.d.ts
 /supabase/.temp/
 *.tsbuildinfo
 
+# Local design captures and asset-processing scratch files.
+/.impeccable/review/
+/.impeccable/assets/*/*.png
+/.impeccable/assets/*/generated-spec.json
+/.impeccable/assets/*/finalize-assets.mjs
+/.impeccable/assets/*/logo-crop.json
+
 .vercel
 .env*

@@ -1,0 +1,6 @@
+Use case: precise-object-edit
+Edit target: the supplied white monogram on transparency.
+Primary request: fix only the letter geometry: the right stem is currently too tall and makes this read as lowercase d. Shorten the upper end of the right stem so that its top is exactly aligned with the top of the rounded bowl. No portion of the mark may project above the top of the bowl. The result must read unmistakably as a custom single-storey lowercase a, not d, b, o, q or an uppercase letter. Keep the same broad white continuous silhouette, rounded nearly square bowl, doorway-shaped upright counter, clean rounded bends, bottom alignment, centered position and overall width. One single connected shape. Refine the junction so the shorter right stem remains visibly part of an a-shaped monogram.
+Style: pristine flat white vector-like production logo, evenly filled #ffffff with no texture, shading, grain, gradient, outlines, shadow, bevel or distress. Bold enough for 32px. Centered on a square transparent canvas with generous transparent margin.
+Background: genuine transparent alpha; the counter and all pixels outside the single white shape are fully transparent. No specks or residue.
+Avoid: a tall ascender, d-shaped silhouette, angular interlocking A/C, extra shapes, written wordmark, watermark, border, checkerboard, tile or background.

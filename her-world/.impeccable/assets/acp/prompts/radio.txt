@@ -1,0 +1,7 @@
+Use case: photorealistic-natural
+Asset type: reusable landscape creator setting for ACP show scene selection.
+Scene: a minimalist unoccupied late-night radio studio. A broad walnut desk in the lower foreground, warm amber lamp glow, restrained charcoal acoustic wall panels, one small analog microphone on a stand placed off-center, dim dark window farther back. No chair or equipment blocking the center.
+Composition: landscape 16:9, eye-level, calm editorial interior photograph using a natural 35mm lens. Intentional clear empty central foreground and desk area where a character could later be composited. Balanced broad planes, few objects, moderate depth, no extreme wide-angle distortion.
+Lighting: soft practical amber light with believable low-light shadows, charcoal and warm walnut color, muted highlights; no neon or dramatic cinematic beams.
+Materials: natural walnut grain, dark fabric acoustic treatment, understated metal microphone.
+Constraints: absolutely no people or human figures, no faces, no mannequins, no text, no signage, no logos, no watermark. No UI chrome, card border, rounded corners, or vignette. Clean simple atmosphere, restrained detail, straight-on eye-level composition. This is a physical environment photograph, not a software screen.

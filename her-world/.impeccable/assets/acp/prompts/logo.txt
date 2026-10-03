@@ -1,0 +1,6 @@
+Use case: precise-object-edit
+Edit target: supplied transparent ACP mark.
+Primary request: clean this mark into a pristine, very simple flat white production logo. Preserve the overall distinctive interlocking A/C geometric concept and its balanced square composition, but redraw the two solid shapes with perfectly clean straight contours. Fill each shape uniformly #fafafa, no grayscale texture. Remove every stray white speck, black hairline contour, distress, shadow and alpha noise. The large white upper shape and white lower-right C shape must have absolutely solid uninterrupted flat interiors, with a clean transparent negative-space opening between them.
+Style: professional minimal vector-like brand symbol, exactly two bold flat shapes, broad silhouette readable at 32 pixels, no detail.
+Background: true transparent alpha with clean antialiased edges. Every area outside the two large clean shapes must be entirely transparent, including their negative spaces. No white residue in gaps.
+Avoid: texture, grain, gradients, 3D, outlines, shadows, extra shapes, aperture blades, gear, nodes, people, faces, text, watermark, border or background tile.

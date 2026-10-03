@@ -118,6 +118,7 @@ export const offlineStatus: LaunchStatus = {
   message: "Checking launch services…",
 };
 export function newDraft(_preset = "blank"): CharacterDraft {
+  const show = defaultShow();
   return {
     id: crypto.randomUUID(),
     name: "",
@@ -134,7 +135,7 @@ export function newDraft(_preset = "blank"): CharacterDraft {
     coinBanner: "",
     rightsConfirmed: false,
     updatedAt: Date.now(),
-    show: { ...defaultShow(), continuous: true, bufferMinutes: 5 },
+    show: { ...show, clips: [{...show.clips[0], title: "Opening scene", script: "", direction: ""}], continuous: true, bufferMinutes: 10 },
   };
 }
 export const samplePortrait = (_draft: CharacterDraft | null) =>

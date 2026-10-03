@@ -1,0 +1,184 @@
+{
+  "schema": "impeccable-raster-manifest/1",
+  "created_at": "2026-10-03T19:58:32.764Z",
+  "generation_mode": "built-in image_gen",
+  "produce": [
+    {
+      "id": "scene-radio",
+      "source_crop": null,
+      "source_image": "C:\\Users\\wante\\.codex\\generated_images\\01a10353-c633-74f0-9ae6-069a68bbda55\\exec-b206d6c7-955d-4456-a90f-511067e1a4c8.png",
+      "output_path": "C:\\Users\\wante\\Documents\\ChatGPT\\acp-ui-local\\her-world\\public\\images\\acp\\scene-radio.webp",
+      "public_url": "/images/acp/scene-radio.webp",
+      "strategy": "Built-in image_gen photorealistic environment generation; sharp WebP quality 88 compression without resizing or cropping.",
+      "prompt_used": "Use case: photorealistic-natural\nAsset type: reusable landscape creator setting for ACP show scene selection.\nScene: a minimalist unoccupied late-night radio studio. A broad walnut desk in the lower foreground, warm amber lamp glow, restrained charcoal acoustic wall panels, one small analog microphone on a stand placed off-center, dim dark window farther back. No chair or equipment blocking the center.\nComposition: landscape 16:9, eye-level, calm editorial interior photograph using a natural 35mm lens. Intentional clear empty central foreground and desk area where a character could later be composited. Balanced broad planes, few objects, moderate depth, no extreme wide-angle distortion.\nLighting: soft practical amber light with believable low-light shadows, charcoal and warm walnut color, muted highlights; no neon or dramatic cinematic beams.\nMaterials: natural walnut grain, dark fabric acoustic treatment, understated metal microphone.\nConstraints: absolutely no people or human figures, no faces, no mannequins, no text, no signage, no logos, no watermark. No UI chrome, card border, rounded corners, or vignette. Clean simple atmosphere, restrained detail, straight-on eye-level composition. This is a physical environment photograph, not a software screen.",
+      "prompt_history": [
+        "Use case: photorealistic-natural\nAsset type: reusable landscape creator setting for ACP show scene selection.\nScene: a minimalist unoccupied late-night radio studio. A broad walnut desk in the lower foreground, warm amber lamp glow, restrained charcoal acoustic wall panels, one small analog microphone on a stand placed off-center, dim dark window farther back. No chair or equipment blocking the center.\nComposition: landscape 16:9, eye-level, calm editorial interior photograph using a natural 35mm lens. Intentional clear empty central foreground and desk area where a character could later be composited. Balanced broad planes, few objects, moderate depth, no extreme wide-angle distortion.\nLighting: soft practical amber light with believable low-light shadows, charcoal and warm walnut color, muted highlights; no neon or dramatic cinematic beams.\nMaterials: natural walnut grain, dark fabric acoustic treatment, understated metal microphone.\nConstraints: absolutely no people or human figures, no faces, no mannequins, no text, no signage, no logos, no watermark. No UI chrome, card border, rounded corners, or vignette. Clean simple atmosphere, restrained detail, straight-on eye-level composition. This is a physical environment photograph, not a software screen."
+      ],
+      "prompt_sidecar": "C:\\Users\\wante\\Documents\\ChatGPT\\acp-ui-local\\her-world\\.impeccable\\assets\\acp\\prompts\\radio.txt",
+      "provenance": "embed-prompt.mjs WebP sidecar fallback at C:\\Users\\wante\\Documents\\ChatGPT\\acp-ui-local\\her-world\\public\\images\\acp\\scene-radio.webp.json",
+      "dimensions": {
+        "width": 1672,
+        "height": 941
+      },
+      "format": "webp",
+      "transparency": false,
+      "bytes": 84242,
+      "crop": {
+        "source": "approximately 16:9",
+        "treatment": "No crop applied. Centered object-fit: cover for 16:9 thumbnails; retain the center foreground.",
+        "focal_point": "50% 50%"
+      },
+      "purpose": "Radio setting thumbnail and reusable clean plate for a later character composite.",
+      "deviations": [
+        "Native tool produced 1672×941, approximately 16:9."
+      ],
+      "qa_status": "accepted",
+      "qa_evidence": "Inspected generated output and selected WebP. Unoccupied scene, empty central foreground, no human figures, text, watermark, baked card or UI chrome; natural materials and restrained lighting."
+    },
+    {
+      "id": "scene-loft",
+      "source_crop": null,
+      "source_image": "C:\\Users\\wante\\.codex\\generated_images\\01a10353-c633-74f0-9ae6-069a68bbda55\\exec-47b11874-c752-4cf7-a4bc-fa3c900155a5.png",
+      "output_path": "C:\\Users\\wante\\Documents\\ChatGPT\\acp-ui-local\\her-world\\public\\images\\acp\\scene-loft.webp",
+      "public_url": "/images/acp/scene-loft.webp",
+      "strategy": "Built-in image_gen photorealistic environment generation; sharp WebP quality 88 compression without resizing or cropping.",
+      "prompt_used": "Use case: photorealistic-natural\nAsset type: reusable landscape creator setting for ACP show scene selection.\nScene: a minimalist unoccupied daylight loft. Tall windows, soft linen curtains, muted distant city buildings through the glass, warm neutral plaster walls, pale wood floor. A low unobtrusive linen seat may be visible at the edge, with the center foreground kept fully open.\nComposition: landscape 16:9, eye-level, calm editorial interior photograph using a natural 35mm lens. Intentional clear empty central foreground where a character could later be composited. Balanced broad planes, few objects, moderate depth, no extreme wide-angle distortion.\nLighting: soft overcast daylight, off-white linen, pale greige plaster and warm pale wood, subdued airy atmosphere, no blown highlights.\nMaterials: real linen weave, subtle plaster texture, pale wood grain.\nConstraints: absolutely no people or human figures, no faces, no mannequins, no text, no signage, no logos, no watermark. No UI chrome, card border, rounded corners, or vignette. Clean simple atmosphere, restrained detail, straight-on eye-level composition. This is a physical environment photograph, not a software screen.",
+      "prompt_history": [
+        "Use case: photorealistic-natural\nAsset type: reusable landscape creator setting for ACP show scene selection.\nScene: a minimalist unoccupied daylight loft. Tall windows, soft linen curtains, muted distant city buildings through the glass, warm neutral plaster walls, pale wood floor. A low unobtrusive linen seat may be visible at the edge, with the center foreground kept fully open.\nComposition: landscape 16:9, eye-level, calm editorial interior photograph using a natural 35mm lens. Intentional clear empty central foreground where a character could later be composited. Balanced broad planes, few objects, moderate depth, no extreme wide-angle distortion.\nLighting: soft overcast daylight, off-white linen, pale greige plaster and warm pale wood, subdued airy atmosphere, no blown highlights.\nMaterials: real linen weave, subtle plaster texture, pale wood grain.\nConstraints: absolutely no people or human figures, no faces, no mannequins, no text, no signage, no logos, no watermark. No UI chrome, card border, rounded corners, or vignette. Clean simple atmosphere, restrained detail, straight-on eye-level composition. This is a physical environment photograph, not a software screen."
+      ],
+      "prompt_sidecar": "C:\\Users\\wante\\Documents\\ChatGPT\\acp-ui-local\\her-world\\.impeccable\\assets\\acp\\prompts\\loft.txt",
+      "provenance": "embed-prompt.mjs WebP sidecar fallback at C:\\Users\\wante\\Documents\\ChatGPT\\acp-ui-local\\her-world\\public\\images\\acp\\scene-loft.webp.json",
+      "dimensions": {
+        "width": 1672,
+        "height": 941
+      },
+      "format": "webp",
+      "transparency": false,
+      "bytes": 125738,
+      "crop": {
+        "source": "approximately 16:9",
+        "treatment": "No crop applied. Centered object-fit: cover for 16:9 thumbnails; retain the center foreground.",
+        "focal_point": "50% 50%"
+      },
+      "purpose": "Loft setting thumbnail and reusable clean plate for a later character composite.",
+      "deviations": [
+        "Native tool produced 1672×941, approximately 16:9."
+      ],
+      "qa_status": "accepted",
+      "qa_evidence": "Inspected generated output and selected WebP. Unoccupied scene, empty central foreground, no human figures, text, watermark, baked card or UI chrome; natural materials and restrained lighting."
+    },
+    {
+      "id": "scene-cafe",
+      "source_crop": null,
+      "source_image": "C:\\Users\\wante\\.codex\\generated_images\\01a10353-c633-74f0-9ae6-069a68bbda55\\exec-cdfd9640-3715-4124-add9-e457490bcc68.png",
+      "output_path": "C:\\Users\\wante\\Documents\\ChatGPT\\acp-ui-local\\her-world\\public\\images\\acp\\scene-cafe.webp",
+      "public_url": "/images/acp/scene-cafe.webp",
+      "strategy": "Built-in image_gen photorealistic environment generation; sharp WebP quality 88 compression without resizing or cropping.",
+      "prompt_used": "Use case: photorealistic-natural\nAsset type: reusable landscape creator setting for ACP show scene selection.\nScene: a minimalist unoccupied cafe corner. Warm matte plaster walls, one large dark sage-green painted window frame, gentle afternoon sunlight. A simple small wooden cafe table at the edge, simple bench along a wall, no clutter or menus; the central foreground remains open.\nComposition: landscape 16:9, eye-level, calm editorial interior photograph using a natural 35mm lens. Intentional clear empty central foreground where a character could later be composited. Balanced broad planes, few objects, moderate depth, no extreme wide-angle distortion.\nLighting: diffused afternoon warmth, subtle window shadows, quiet cream plaster with green architectural accent; subdued natural color and no neon.\nMaterials: tactile plaster, worn green painted wood frame, warm plain wood furniture.\nConstraints: absolutely no people or human figures, no faces, no mannequins, no text, no signage, no logos, no watermark. No UI chrome, card border, rounded corners, or vignette. Clean simple atmosphere, restrained detail, straight-on eye-level composition. This is a physical environment photograph, not a software screen.",
+      "prompt_history": [
+        "Use case: photorealistic-natural\nAsset type: reusable landscape creator setting for ACP show scene selection.\nScene: a minimalist unoccupied cafe corner. Warm matte plaster walls, one large dark sage-green painted window frame, gentle afternoon sunlight. A simple small wooden cafe table at the edge, simple bench along a wall, no clutter or menus; the central foreground remains open.\nComposition: landscape 16:9, eye-level, calm editorial interior photograph using a natural 35mm lens. Intentional clear empty central foreground where a character could later be composited. Balanced broad planes, few objects, moderate depth, no extreme wide-angle distortion.\nLighting: diffused afternoon warmth, subtle window shadows, quiet cream plaster with green architectural accent; subdued natural color and no neon.\nMaterials: tactile plaster, worn green painted wood frame, warm plain wood furniture.\nConstraints: absolutely no people or human figures, no faces, no mannequins, no text, no signage, no logos, no watermark. No UI chrome, card border, rounded corners, or vignette. Clean simple atmosphere, restrained detail, straight-on eye-level composition. This is a physical environment photograph, not a software screen."
+      ],
+      "prompt_sidecar": "C:\\Users\\wante\\Documents\\ChatGPT\\acp-ui-local\\her-world\\.impeccable\\assets\\acp\\prompts\\cafe.txt",
+      "provenance": "embed-prompt.mjs WebP sidecar fallback at C:\\Users\\wante\\Documents\\ChatGPT\\acp-ui-local\\her-world\\public\\images\\acp\\scene-cafe.webp.json",
+      "dimensions": {
+        "width": 1672,
+        "height": 941
+      },
+      "format": "webp",
+      "transparency": false,
+      "bytes": 234226,
+      "crop": {
+        "source": "approximately 16:9",
+        "treatment": "No crop applied. Centered object-fit: cover for 16:9 thumbnails; retain the center foreground.",
+        "focal_point": "50% 50%"
+      },
+      "purpose": "Cafe setting thumbnail and reusable clean plate for a later character composite.",
+      "deviations": [
+        "Native tool produced 1672×941, approximately 16:9."
+      ],
+      "qa_status": "accepted",
+      "qa_evidence": "Inspected generated output and selected WebP. Unoccupied scene, empty central foreground, no human figures, text, watermark, baked card or UI chrome; natural materials and restrained lighting."
+    },
+    {
+      "id": "scene-night",
+      "source_crop": null,
+      "source_image": "C:\\Users\\wante\\.codex\\generated_images\\01a10353-c633-74f0-9ae6-069a68bbda55\\exec-54fc4dfa-9c15-440a-b31a-51be4c131845.png",
+      "output_path": "C:\\Users\\wante\\Documents\\ChatGPT\\acp-ui-local\\her-world\\public\\images\\acp\\scene-night.webp",
+      "public_url": "/images/acp/scene-night.webp",
+      "strategy": "Built-in image_gen photorealistic environment generation; sharp WebP quality 88 compression without resizing or cropping.",
+      "prompt_used": "Use case: photorealistic-natural\nAsset type: reusable landscape creator setting for ACP show scene selection.\nScene: a minimalist unoccupied room at night. Muted violet-gray plaster wall, one broad window with gentle rain droplets on the glass, softly out-of-focus city lights outside, a simple low dark console along the side. The central foreground remains open.\nComposition: landscape 16:9, eye-level, calm editorial interior photograph using a natural 35mm lens. Intentional clear empty central foreground where a character could later be composited. Balanced broad planes, few objects, moderate depth, no extreme wide-angle distortion.\nLighting: quiet low-light violet-gray ambiance with subtle warm city light reflections, soft believable shadows, periwinkle undertone rather than bright purple; no neon strips.\nMaterials: matte plaster, rain-speckled real glass, dark warm wood.\nConstraints: absolutely no people or human figures, no faces, no mannequins, no text, no signage, no logos, no watermark. No UI chrome, card border, rounded corners, or vignette. Clean simple atmosphere, restrained detail, straight-on eye-level composition. This is a physical environment photograph, not a software screen.",
+      "prompt_history": [
+        "Use case: photorealistic-natural\nAsset type: reusable landscape creator setting for ACP show scene selection.\nScene: a minimalist unoccupied room at night. Muted violet-gray plaster wall, one broad window with gentle rain droplets on the glass, softly out-of-focus city lights outside, a simple low dark console along the side. The central foreground remains open.\nComposition: landscape 16:9, eye-level, calm editorial interior photograph using a natural 35mm lens. Intentional clear empty central foreground where a character could later be composited. Balanced broad planes, few objects, moderate depth, no extreme wide-angle distortion.\nLighting: quiet low-light violet-gray ambiance with subtle warm city light reflections, soft believable shadows, periwinkle undertone rather than bright purple; no neon strips.\nMaterials: matte plaster, rain-speckled real glass, dark warm wood.\nConstraints: absolutely no people or human figures, no faces, no mannequins, no text, no signage, no logos, no watermark. No UI chrome, card border, rounded corners, or vignette. Clean simple atmosphere, restrained detail, straight-on eye-level composition. This is a physical environment photograph, not a software screen."
+      ],
+      "prompt_sidecar": "C:\\Users\\wante\\Documents\\ChatGPT\\acp-ui-local\\her-world\\.impeccable\\assets\\acp\\prompts\\night.txt",
+      "provenance": "embed-prompt.mjs WebP sidecar fallback at C:\\Users\\wante\\Documents\\ChatGPT\\acp-ui-local\\her-world\\public\\images\\acp\\scene-night.webp.json",
+      "dimensions": {
+        "width": 1672,
+        "height": 941
+      },
+      "format": "webp",
+      "transparency": false,
+      "bytes": 204122,
+      "crop": {
+        "source": "approximately 16:9",
+        "treatment": "No crop applied. Centered object-fit: cover for 16:9 thumbnails; retain the center foreground.",
+        "focal_point": "50% 50%"
+      },
+      "purpose": "Night setting thumbnail and reusable clean plate for a later character composite.",
+      "deviations": [
+        "Native tool produced 1672×941, approximately 16:9."
+      ],
+      "qa_status": "accepted",
+      "qa_evidence": "Inspected generated output and selected WebP. Unoccupied scene, empty central foreground, no human figures, text, watermark, baked card or UI chrome; natural materials and restrained lighting."
+    }
+  ],
+  "direct": [],
+  "semantic": [],
+  "execution_order": [
+    "scene-radio",
+    "scene-loft",
+    "scene-cafe",
+    "scene-night"
+  ],
+  "blockers": [],
+  "assumptions": [
+    "Code-first direction supplied by parent; no approved visual comp.",
+    "Final UI owns borders, radius, clipping, labels and interactions.",
+    "The four settings are reusable environment plates; no generated portrait people."
+  ],
+  "retired": [
+    {
+      "id": "acp-brand-mark",
+      "source_crop": null,
+      "source_image": "C:/Users/wante/.codex/generated_images/01a10353-c633-74f0-9ae6-069a68bbda55/exec-d946cb8e-685c-4768-b6c9-1ebd784e763f.png",
+      "output_path": "C:\\Users\\wante\\Documents\\ChatGPT\\acp-ui-local\\her-world\\public\\images\\acp\\logo.png",
+      "public_url": "/images/acp/logo.png",
+      "strategy": "Built-in image_gen generation with one precise-object-edit cleanup pass; lossless PNG compression.",
+      "prompt_used": "Use case: precise-object-edit\nEdit target: supplied transparent ACP mark.\nPrimary request: clean this mark into a pristine, very simple flat white production logo. Preserve the overall distinctive interlocking A/C geometric concept and its balanced square composition, but redraw the two solid shapes with perfectly clean straight contours. Fill each shape uniformly #fafafa, no grayscale texture. Remove every stray white speck, black hairline contour, distress, shadow and alpha noise. The large white upper shape and white lower-right C shape must have absolutely solid uninterrupted flat interiors, with a clean transparent negative-space opening between them.\nStyle: professional minimal vector-like brand symbol, exactly two bold flat shapes, broad silhouette readable at 32 pixels, no detail.\nBackground: true transparent alpha with clean antialiased edges. Every area outside the two large clean shapes must be entirely transparent, including their negative spaces. No white residue in gaps.\nAvoid: texture, grain, gradients, 3D, outlines, shadows, extra shapes, aperture blades, gear, nodes, people, faces, text, watermark, border or background tile.\n",
+      "prompt_history": [
+        "Use case: logo-brand\nAsset type: compact standalone ACP brand mark.\nPrimary request: create one distinctive, exceptionally simple white geometric brand symbol for Artificial Character Protocol. An abstract interlocking A and C, or character doorway, expressed with exactly two or three bold flat solid shapes. Suggest an open portal and a forward character silhouette through negative space, without depicting a person. Compact, balanced, confident asymmetrical silhouette, crisp edges and broad shapes readable when reduced to 32 pixels.\nStyle: flat vector-like graphic, pure white #fafafa only, no outline, no gradient, no texture, no shadow or 3D.\nComposition: square image, one centered mark occupying approximately 78 percent of the canvas; no text of any kind.\nBackground: genuinely transparent alpha background.\nAvoid: aperture blades, gear, network nodes, circles connected by lines, people, faces, wordmark, letters written as text, border, rounded tile, decorative sparkles, watermark. Produce only the mark on transparency.",
+        "Use case: precise-object-edit\nEdit target: supplied transparent ACP mark.\nPrimary request: clean this mark into a pristine, very simple flat white production logo. Preserve the overall distinctive interlocking A/C geometric concept and its balanced square composition, but redraw the two solid shapes with perfectly clean straight contours. Fill each shape uniformly #fafafa, no grayscale texture. Remove every stray white speck, black hairline contour, distress, shadow and alpha noise. The large white upper shape and white lower-right C shape must have absolutely solid uninterrupted flat interiors, with a clean transparent negative-space opening between them.\nStyle: professional minimal vector-like brand symbol, exactly two bold flat shapes, broad silhouette readable at 32 pixels, no detail.\nBackground: true transparent alpha with clean antialiased edges. Every area outside the two large clean shapes must be entirely transparent, including their negative spaces. No white residue in gaps.\nAvoid: texture, grain, gradients, 3D, outlines, shadows, extra shapes, aperture blades, gear, nodes, people, faces, text, watermark, border or background tile.\n"
+      ],
+      "prompt_sidecar": "C:\\Users\\wante\\Documents\\ChatGPT\\acp-ui-local\\her-world\\.impeccable\\assets\\acp\\prompts\\logo.txt",
+      "provenance": "Embedded PNG tEXt impeccable:prompt via embed-prompt.mjs",
+      "dimensions": {
+        "width": 1254,
+        "height": 1254
+      },
+      "format": "png",
+      "transparency": true,
+      "bytes": 226431,
+      "crop": {
+        "source": "square",
+        "treatment": "Preserve full canvas; object-fit: contain.",
+        "focal_point": "50% 50%"
+      },
+      "purpose": "ACP brand symbol for shared navigation and compact creator UI.",
+      "deviations": [
+        "Native transparency preview exposes RGB values in transparent pixels; actual RGBA composition on charcoal is clean."
+      ],
+      "qa_status": "superseded",
+      "qa_evidence": "Replaced after the user rejected the angular mark. Original generation remains recoverable at source_image; shipping file removed."
+    }
+  ]
+}

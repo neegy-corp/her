@@ -1,6 +1,9 @@
 "use client";
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { ArrowUpRight } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { AcpNav, AcpFooter } from "./acp-nav";
 import type { PublicToken } from "@/lib/public-tokens";
 import "./launchpad.css";
@@ -9,6 +12,7 @@ export default function TokenDirectory() {
   const [tokens, setTokens] = useState<PublicToken[]>([]),
     [next, setNext] = useState<number | null>(null),
     [loading, setLoading] = useState(true),
+    [configured, setConfigured] = useState(true),
     [error, setError] = useState(""),
     [search, setSearch] = useState("");
   async function load(offset = 0) {
@@ -19,9 +23,11 @@ export default function TokenDirectory() {
       const body = (await response.json()) as {
         tokens: PublicToken[];
         nextOffset: number | null;
+        configured?: boolean;
         error?: string;
       };
       if (!response.ok) throw new Error(body.error || "Unable to load tokens.");
+      setConfigured(body.configured !== false);
       setTokens((p) =>
         offset
           ? [
@@ -49,9 +55,9 @@ export default function TokenDirectory() {
     <main className="lp acp-pages">
       <AcpNav active="tokens" />
       <section className="acp-directory">
-        <div className="acp-directory-heading">
+        <div className="acp-directory-heading acp-art-heading">
+          <img className="acp-heading-art" src="/images/acp-v2/discovery.webp" alt="" />
           <div>
-            <span className="lp-kicker">THE ACP DIRECTORY</span>
             <h1>
               The characters.
               <br />
@@ -61,13 +67,13 @@ export default function TokenDirectory() {
               Every confirmed ACP token launch, with a direct link to pump.fun.
               A listed coin does not mean its stream is currently live.
             </p>
+            <Button asChild><Link href="/create">
+              Create a character <ArrowUpRight size={14} aria-hidden="true" />
+            </Link></Button>
           </div>
-          <Link className="lp-primary" href="/create">
-            Create a character ↗
-          </Link>
         </div>
         <div className="acp-token-tools">
-          <input
+          <Input
             aria-label="Search loaded tokens"
             placeholder="Search name, ticker or contract…"
             value={search}
@@ -82,13 +88,12 @@ export default function TokenDirectory() {
           <div className="acp-token-empty" role="alert">
             <h2>Couldn’t load the directory.</h2>
             <p>{error}</p>
-            <button
-              className="lp-primary"
+            <Button
               onClick={() => void load(tokens.length ? next || 0 : 0)}
               disabled={loading}
             >
               Retry
-            </button>
+            </Button>
           </div>
         )}
         {loading && !tokens.length ? (
@@ -97,16 +102,13 @@ export default function TokenDirectory() {
           </div>
         ) : !error && !tokens.length ? (
           <div className="acp-token-empty">
-            <span>✳</span>
-            <h2>The first launch is still ahead.</h2>
+            <h2>{configured ? "The first launch is still ahead." : "The directory isn’t connected here yet."}</h2>
             <p>
-              No ACP-created tokens have been confirmed yet. Draft characters
-              appear in your studio until their coin creation is confirmed
-              on-chain.
+              {configured ? "No ACP-created tokens have been confirmed yet. Draft characters stay in your studio until their coin launch is confirmed on-chain." : "This local preview includes the directory interface. Confirmed launches appear when its database is connected. You can create and save character drafts on this device now."}
             </p>
-            <Link className="lp-primary" href="/create">
-              Open the creation studio ↗
-            </Link>
+            <Button asChild><Link href="/create">
+              Open the creation studio <ArrowUpRight size={14} aria-hidden="true" />
+            </Link></Button>
           </div>
         ) : (
           <>
@@ -147,7 +149,7 @@ export default function TokenDirectory() {
                       target="_blank"
                       rel="noopener noreferrer"
                     >
-                      View on pump.fun ↗
+                      View on pump.fun <ArrowUpRight size={14} aria-hidden="true" />
                     </a>
                   </div>
                 </article>
@@ -165,13 +167,12 @@ export default function TokenDirectory() {
         )}
         {next !== null && (
           <div className="acp-directory-more">
-            <button
-              className="lp-primary"
+            <Button
               disabled={loading}
               onClick={() => void load(next)}
             >
               {loading ? "Loading…" : "Load more tokens"}
-            </button>
+            </Button>
           </div>
         )}
       </section>

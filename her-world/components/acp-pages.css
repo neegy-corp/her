@@ -7,9 +7,9 @@
 .acp-dev-services { display:grid; grid-template-columns:repeat(4,1fr); gap:20px; padding:28px 0; margin-bottom:20px; font-size:12px; }
 .acp-dev-services b { display:block; margin-top:8px; font-weight:500; }
 .acp-dev-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:28px; }
-.acp-dev-card { border:1px solid var(--lp-line); padding:28px; background:#f5f5eb; }
+.acp-dev-card { border:1px solid var(--lp-line); padding:28px; background:var(--lp-white); }
 .acp-dev-identity { display:flex; gap:20px; align-items:center; }
-.acp-dev-identity img, .acp-dev-monogram { width:72px; height:88px; object-fit:cover; background:#dce5d0; display:grid; place-items:center; font-size:32px; }
+.acp-dev-identity img, .acp-dev-monogram { width:72px; height:88px; object-fit:cover; background:var(--lp-white); display:grid; place-items:center; font-size:32px; }
 .acp-dev-identity h2 { font-size:32px; margin:10px 0 0; overflow-wrap:anywhere; }
 .acp-dev-identity p { margin:5px 0; }
 .acp-dev-links { display:grid; grid-template-columns:1fr 1fr; margin:24px 0; gap:0 24px; }
@@ -33,7 +33,7 @@
 .acp-pages h2 {
   font-family: var(--serif);
   font-weight: 400;
-  letter-spacing: -0.045em;
+  letter-spacing: -0.03emem;
 }
 .acp-pages h1 {
   font-size: clamp(46px, 4.8vw, 88px);
@@ -66,11 +66,11 @@
   margin-top: 28px;
 }
 .acp-storyboard {
-  background: #224b3b;
-  color: #eff3d7;
+  background: #14201b;
+  color: var(--lp-ink);
   transform: rotate(2deg);
   box-shadow: 12px 16px 0 #d6ddce;
-  border: 1px solid #244c3d;
+  border: 1px solid var(--lp-line);
 }
 .acp-film-top,
 .acp-film-bottom {
@@ -81,7 +81,7 @@
   justify-content: space-between;
 }
 .acp-film-top {
-  border-bottom: 1px solid #53765e;
+  border-bottom: 1px solid var(--lp-line);
 }
 .acp-film-main {
   display: flex;
@@ -99,7 +99,7 @@
 }
 .acp-star {
   font-size: 94px;
-  color: #d8eea1;
+  color: var(--lp-ink);
 }
 .acp-storyboard ol {
   padding: 0 24px;
@@ -107,7 +107,7 @@
   list-style: none;
 }
 .acp-storyboard li {
-  border-top: 1px solid #53765e;
+  border-top: 1px solid var(--lp-line);
   display: flex;
   align-items: center;
   gap: 16px;
@@ -116,7 +116,7 @@
 }
 .acp-storyboard li b {
   font-size: 11px;
-  color: #b1ca9e;
+  color: var(--lp-muted);
 }
 .acp-storyboard li span {
   margin-left: auto;
@@ -125,7 +125,7 @@
 }
 .acp-film-bottom {
   padding-top: 24px;
-  color: #c9dea8;
+  color: var(--lp-muted);
 }
 .acp-process {
   border-top: 1px solid var(--lp-line);
@@ -150,7 +150,7 @@
   justify-content: space-between;
   gap: 30px;
   padding: 70px 8%;
-  background: #e2e9d5;
+  background: var(--lp-white);
 }
 .acp-launch-callout p {
   color: var(--lp-muted);
@@ -205,7 +205,7 @@
 }
 .acp-token-cover {
   height: 135px;
-  background: #dce5d3;
+  background: var(--lp-white);
   position: relative;
   overflow: hidden;
 }
@@ -228,7 +228,7 @@
   width: 54px;
   object-fit: cover;
   border-radius: 50%;
-  background: #d8eea1;
+  background: var(--lp-white);
   display: grid;
   place-items: center;
 }
@@ -261,14 +261,14 @@
   font-size: 14px;
 }
 .acp-token-empty {
-  border: 1px dashed #b5c3ae;
+  border: 1px dashed var(--lp-line);
   padding: 65px 24px;
   text-align: center;
   background: var(--lp-white);
 }
 .acp-token-empty > span {
   font-size: 50px;
-  color: #6b8668;
+  color: var(--lp-muted);
 }
 .acp-token-empty h2 {
   font-size: 36px;
@@ -289,7 +289,7 @@
 }
 .acp-pages a:focus-visible,
 .acp-pages button:focus-visible {
-  outline: 2px solid #487044;
+  outline: 2px solid var(--studio-accent);
   outline-offset: 5px;
 }
 @media (max-width: 800px) {

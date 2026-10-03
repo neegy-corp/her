@@ -7,6 +7,8 @@ export async function GET(req: Request) {
   const raw = new URL(req.url).searchParams.get("offset") || "0";
   if (!/^\d{1,6}$/.test(raw)) return json({ error: "Invalid page." }, 400);
   const offset = Number(raw);
+  if (!setting("DATABASE_URL") && process.env.NODE_ENV === "development")
+    return json({ tokens: [], nextOffset: null, configured: false });
   if (!setting("DATABASE_URL"))
     return json(
       { error: "The token directory is temporarily unavailable." },

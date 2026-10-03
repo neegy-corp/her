@@ -1,4 +1,9 @@
 "use client";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
+import { StudioSelect } from "./studio-select";
 import { useEffect, useState } from "react";
 import {
   ArrowDown,
@@ -69,11 +74,13 @@ export default function ShowEditor({
   onChange,
   onNotice,
   onImage,
+  servicesAvailable,
 }: {
   draft: CharacterDraft;
   onChange: (show: ShowPlan) => void;
   onNotice: (s: string) => void;
   onImage: (image: { image: string; imageFingerprint: string }) => void;
+  servicesAvailable: boolean;
 }) {
   const [photos, setPhotos] = useState<(RefPhoto & { url: string })[]>([]),
     [busy, setBusy] = useState(""),
@@ -252,31 +259,25 @@ export default function ShowEditor({
   }
   return (
     <div className="lp-show">
-      <ContinuousProgram draft={draft} onChange={onChange} onBusy={setPreparing} />
+      {!servicesAvailable && <p className="lp-service-note">Connect your wallet and cloud services to generate videos. You can write your show now.</p>}
+      <ContinuousProgram draft={draft} onChange={onChange} onBusy={setPreparing} servicesAvailable={servicesAvailable} />
       <fieldset disabled={preparing} style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
-      <div className="lp-form-heading">
-        <div>
-          <span className="lp-kicker">
-            WRITE THE SHOW. LET CHAT TAKE IT FROM THERE.
-          </span>
-          <h3>Give your character a story.</h3>
-        </div>
-        <Video size={24} />
-      </div>
-      <button
-        className="lp-secondary"
-        disabled={!!busy || show.clips.length >= 48}
+      <div className="lp-show-toolbar"><h3>Your scenes</h3>
+      <Button
+        variant="outline" className="lp-secondary"
+        disabled={!!busy || show.clips.length >= 48 || !servicesAvailable}
         onClick={() => void writeScene()}
       >
         {busy === "script" ? "Writing scene…" : "Write a scene with AI"}
-      </button>
+      </Button>
+      </div>
+      <details className="lp-details" open={photos.length > 0 || undefined}><summary>Character reference photos</summary>
       <div className="lp-photo-upload">
         <label>
           <ImagePlus size={23} />
           <strong>Upload reference photos</strong>
           <span>
-            One frontal photo + up to 3 additional views · 4 MB each. Uploaded
-            media uses public links for video providers.
+            Front view + up to 3 extra views · 4 MB each. Uploads use public provider links.
           </span>
           <input
             type="file"
@@ -295,14 +296,15 @@ export default function ShowEditor({
             <div key={p.id}>
               <img src={p.url} alt={p.name} />
               <span>{p.name}</span>
-              <button disabled={!!busy} onClick={() => void upload(p)}>
+              <Button disabled={!!busy || !servicesAvailable} onClick={() => void upload(p)}>
                 <Upload size={12} />{" "}
                 {busy === p.id ? "Uploading…" : "Upload to character"}
-              </button>
+              </Button>
             </div>
           ))}
         </div>
       )}
+      </details>
       <div className="lp-show-flow">
         <span>SCRIPT</span>
         <ArrowDown size={13} />
@@ -318,27 +320,27 @@ export default function ShowEditor({
         >
           <div className="lp-clip-top">
             <span>SCENE {String(index + 1).padStart(2, "0")}</span>
-            <input
+            <Input
               aria-label={`Scene ${index + 1} title`}
               value={clip.title}
               maxLength={60}
               onChange={(e) => update(clip.id, { title: e.target.value })}
             />
-            <button
+            <Button
               aria-label={`Move scene ${index + 1} up`}
               disabled={index === 0}
               onClick={() => move(index, -1)}
             >
               <ArrowUp size={13} />
-            </button>
-            <button
+            </Button>
+            <Button
               aria-label={`Move scene ${index + 1} down`}
               disabled={index === show.clips.length - 1}
               onClick={() => move(index, 1)}
             >
               <ArrowDown size={13} />
-            </button>
-            <button
+            </Button>
+            <Button
               aria-label={`Remove scene ${index + 1}`}
               onClick={() =>
                 onChange({
@@ -348,25 +350,25 @@ export default function ShowEditor({
               }
             >
               <Trash2 size={13} />
-            </button>
+            </Button>
           </div>
           <div className="lp-clip-mode">
-            <button
+            <Button
               aria-pressed={clip.mode === "speech"}
               onClick={() => update(clip.id, { mode: "speech" })}
             >
-              Scripted speech
-            </button>
-            <button
+              Speech
+            </Button>
+            <Button
               aria-pressed={clip.mode === "performance"}
               onClick={() => update(clip.id, { mode: "performance" })}
             >
-              Action / performance
-            </button>
+              Performance
+            </Button>
           </div>
           <label>
-            What they say
-            <textarea
+            Dialogue
+            <Textarea
               value={clip.script}
               maxLength={300}
               rows={3}
@@ -374,8 +376,8 @@ export default function ShowEditor({
             />
           </label>
           <label>
-            What happens on screen
-            <textarea
+            Action & direction
+            <Textarea
               value={clip.direction}
               maxLength={700}
               rows={2}
@@ -384,38 +386,16 @@ export default function ShowEditor({
           </label>
           <div className="lp-clip-options">
             <label>
-              Clip target
-              <select
-                value={clip.duration}
-                onChange={(e) =>
-                  update(clip.id, { duration: Number(e.target.value) })
-                }
-              >
-                {[5, 10, 15].map((n) => (
-                  <option key={n} value={n}>
-                    {n} seconds
-                  </option>
-                ))}
-              </select>
+              Length
+              <StudioSelect label="Clip length" value={clip.duration} onValueChange={duration => update(clip.id, {duration})} options={[5,10,15].map(value => ({value, label: `${value} seconds`}))} />
             </label>
             <label>
-              Chat break after
-              <select
-                value={clip.chatPause}
-                onChange={(e) =>
-                  update(clip.id, { chatPause: Number(e.target.value) })
-                }
-              >
-                {[0, 15, 30, 60, 120].map((n) => (
-                  <option key={n} value={n}>
-                    {n ? n + " seconds" : "No pause"}
-                  </option>
-                ))}
-              </select>
+              Chat pause
+              <StudioSelect label="Chat pause" value={clip.chatPause} onValueChange={chatPause => update(clip.id, {chatPause})} options={[0,15,30,60,120].map(value => ({value, label: value ? `${value} seconds` : "None"}))} />
             </label>
-            <button
-              className="lp-secondary"
-              disabled={!!busy}
+            <Button
+              variant="outline" className="lp-secondary"
+              disabled={!!busy || !servicesAvailable}
               onClick={() => void render(clip)}
             >
               {busy === clip.id ? (
@@ -424,16 +404,16 @@ export default function ShowEditor({
                 <Video size={14} />
               )}
               Generate clip
-            </button>
+            </Button>
           </div>
-          <p className="lp-field-note">
+          <details className="lp-details"><summary>Rendering details</summary><p className="lp-field-note">
             {clip.mode === "speech"
               ? "Tavus renders your written speech using the trained face. Speech length determines clip duration; stage direction is reserved for performance clips."
               : "Kling animates your image and direction. Generated dialogue and voice may vary; preview before publishing."}
-          </p>
+          </p></details>
         </section>
       ))}
-      <button
+      <Button
         className="lp-add-scene"
         disabled={show.clips.length >= 48}
         onClick={() =>
@@ -455,20 +435,14 @@ export default function ShowEditor({
         }
       >
         <Plus size={16} /> Add scene <span>{show.clips.length}/48</span>
-      </button>
-      <div className="lp-generative">
+      </Button>
+      <details className="lp-details"><summary>Stream options</summary><div className="lp-generative">
         <label className="lp-check">
-          <input
-            type="checkbox"
-            checked={show.generative}
-            onChange={(e) =>
-              onChange({ ...show, generative: e.target.checked })
-            }
-          />
+          <Checkbox aria-label="Generate new scenes while streaming" checked={show.generative} onCheckedChange={checked => onChange({...show, generative: checked === true})} />
           <span>
             <strong>{show.continuous ? "Generate new scenes while streaming." : "Let chat write the next chapter."}</strong>
             <small>
-              {show.continuous ? "Keep writing fresh scenes when chat is quiet. Viewer replies play one at a time between clips. Two renders can prepare in the background." : "After the script ends, collect suggestions and turn the strongest ideas into the next scene. One video at a time."}
+              {show.continuous ? "New scenes use the limit below. Replies play between clips." : "After the script ends, collect suggestions and turn the strongest ideas into the next scene. One video at a time."}
             </small>
           </span>
         </label>
@@ -476,48 +450,26 @@ export default function ShowEditor({
           <div className="lp-clip-options">
             <label>
               Collect ideas for
-              <select
-                value={show.chatWindow}
-                onChange={(e) =>
-                  onChange({ ...show, chatWindow: Number(e.target.value) })
-                }
-              >
-                {[15, 30, 60, 120].map((n) => (
-                  <option key={n} value={n}>
-                    {n} seconds
-                  </option>
-                ))}
-              </select>
+              <StudioSelect label="Collect ideas for" value={show.chatWindow} onValueChange={chatWindow => onChange({...show, chatWindow})} options={[15,30,60,120].map(value => ({value, label: `${value} seconds`}))} />
             </label>
             <label>
               New video limit
-              <select
-                value={show.maxGenerations}
-                onChange={(e) =>
-                  onChange({ ...show, maxGenerations: Number(e.target.value) })
-                }
-              >
-                {[1, 3, 5, 10, 20].map((n) => (
-                  <option key={n} value={n}>
-                    {n} videos
-                  </option>
-                ))}
-              </select>
+              <StudioSelect label="New video limit" value={show.maxGenerations} onValueChange={maxGenerations => onChange({...show, maxGenerations})} options={[0,1,3,5,10,20].map(value => ({value, label: `${value} videos`}))} />
             </label>
           </div>
         )}
         <p>
-          Live chat and automatic publishing require the broadcast runner. These
-          are show settings, not an active stream.
+          Changes apply when you start the broadcast studio.
         </p>
       </div>
-      <button
-        className="lp-next"
+      </details>
+      <Button
+        variant="ghost" className="lp-next"
         onClick={() => void refresh()}
-        disabled={!!busy}
+        disabled={!!busy || !servicesAvailable}
       >
-        Refresh generated clips <Video size={16} />
-      </button>
+        Check clips <Video size={16} />
+      </Button>
       {renders.map((r) => (
         <div className="lp-render-row" key={r.id}>
           <span>
@@ -526,9 +478,9 @@ export default function ShowEditor({
             · {r.status}
           </span>
           {r.video_url && (
-            <button onClick={() => setPreview(r.video_url!)}>
+            <Button onClick={() => setPreview(r.video_url!)}>
               <Play size={14} /> Preview
-            </button>
+            </Button>
           )}
         </div>
       ))}
