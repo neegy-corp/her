@@ -20,7 +20,7 @@ The existing app includes wallet-owned drafts, device drafts, reference images, 
 
 ## Brand Commitments
 
-Keep ACP / Artificial Character Protocol and its existing HER collective. The user chose a dark creator studio, rejected decorative human portraits and the signal-green palette, and requests a simpler shadcn interface. The first angular ACP mark was rejected. Use a refined generated mark, a dimensional pearl/silver hero, and a small family of companion backgrounds placed selectively across the site; keep controls quiet and the overall result clean. Four photographic setting choices remain. The UI exposes four steps, PFP-only coin artwork, and fixed ten-minute preparation with no buffer control. The homepage demonstrates editable creator controls. Preserve the product's actual workflows and provider gates. No decorative fictional people in the interface.
+Keep ACP / Artificial Character Protocol as the only visible site brand. The user explicitly requested removal of the old collective branding and mentions. The user chose a dark creator studio, rejected decorative human portraits and the signal-green palette, and requests a simpler shadcn interface. The first angular ACP mark was rejected. Use a refined generated mark, a dimensional pearl/silver hero, and a small family of companion backgrounds placed selectively across the site; keep controls quiet and the overall result clean. Four photographic setting choices remain. The UI exposes four steps, PFP-only coin artwork, and fixed ten-minute preparation with no buffer control. The homepage demonstrates editable creator controls. Preserve the product's actual workflows and provider gates. No decorative fictional people in the interface.
 
 ## Evidence on Hand
 

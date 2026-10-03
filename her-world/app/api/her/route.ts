@@ -44,7 +44,7 @@ async function handlePost(req:Request){try{
  if(act==='challenge'){
   const who=address(body.wallet),now=Date.now();
   await db().batch([db().prepare('DELETE FROM her_private.challenges WHERE expires < ?').bind(now),db().prepare('DELETE FROM her_private.wallet_sessions WHERE expires < ?').bind(now)]);
-  const id=crypto.randomUUID(); const message=`${new URL(requestOrigin(req)).host} wants you to sign in to HER with your Solana wallet:\n${who}\n\nVerify ownership. This does not burn tokens or authorize a transaction.\n\nURI: ${requestOrigin(req)}\nNonce: ${id}\nIssued At: ${new Date(now).toISOString()}\nExpiration Time: ${new Date(now+300000).toISOString()}`;
+  const id=crypto.randomUUID(); const message=`${new URL(requestOrigin(req)).host} wants you to sign in to ACP with your Solana wallet:\n${who}\n\nVerify ownership. This does not burn tokens or authorize a transaction.\n\nURI: ${requestOrigin(req)}\nNonce: ${id}\nIssued At: ${new Date(now).toISOString()}\nExpiration Time: ${new Date(now+300000).toISOString()}`;
   await db().prepare('INSERT INTO her_private.challenges (id,wallet,message,expires) VALUES (?,?,?,?)').bind(id,who,message,now+300000).run();return json({id,message});
  }
  if(act==='signin'){

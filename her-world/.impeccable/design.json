@@ -544,7 +544,7 @@
   ],
   "narrative": {
     "northStar": "The AI Creator Studio",
-    "overview": "ACP pairs a calm charcoal workspace with a selective family of pearl and silver studio images. White actions, quiet periwinkle selection and aligned shadcn controls keep human creative control clear. This system covers the ACP homepage, launchpad, creator dashboard, token directory and browser broadcast studio family; the HER collective retains its separate visual world.\n\nThe imagery gives the brand physical presence while scripts, identity fields, settings and next actions remain semantic, editable UI. Sculptures are abstract brand material or blank-preview placeholders. Character images belong to the creator's references or generated work, and the four setting photographs depict unoccupied places.",
+    "overview": "ACP pairs a calm charcoal workspace with a selective family of pearl and silver studio images. White actions, quiet periwinkle selection and aligned shadcn controls keep human creative control clear. This system covers the ACP homepage, launchpad, creator dashboard, token directory and browser broadcast studio family. The legacy collective entry redirects to Discover; navigation, wallet copy, error states and operations use ACP.\n\nThe imagery gives the brand physical presence while scripts, identity fields, settings and next actions remain semantic, editable UI. Sculptures are abstract brand material or blank-preview placeholders. Character images belong to the creator's references or generated work, and the four setting photographs depict unoccupied places.",
     "keyCharacteristics": [
       "Charcoal layers and fine strokes define working surfaces.",
       "White actions and restrained periwinkle selection establish hierarchy.",
@@ -577,6 +577,11 @@
         "name": "The Hero Boundary Rule",
         "body": "Feather the homepage hero's actual raster bounds into the charcoal canvas with intersecting horizontal and vertical alpha ramps. Keep the sculpture opaque. In the stacked cover crop, complete the bottom fade before the image's 30px clipped offset.",
         "section": "layout"
+      },
+      {
+        "name": "The Decorative Artwork Rule",
+        "body": "Apply intersected edge fades to the native image bounds of discovery and studio artwork. Match adjacent copy and blank-preview surfaces to the charcoal ground. Preserve clear frames around character output, profile pictures and selectable setting photos.",
+        "section": "layout"
       }
     ],
     "dos": [
@@ -595,7 +600,7 @@
       "Don't add decorative kickers, eyebrows, glyph action icons or inherited hard offset shadows.",
       "Don't add coin-banner controls or expose the fixed ten-minute preparation target as a buffer selector.",
       "Don't treat local saves, queued renders or accepted transport as wallet saves, finished output or verified public playback.",
-      "Don't extend this scoped ACP system to the HER collective without a separate decision."
+      "Don't reintroduce the retired collective branding or footer link."
     ]
   }
 }

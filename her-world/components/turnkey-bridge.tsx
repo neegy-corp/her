@@ -73,7 +73,7 @@ function Connector({ onReady, onConnected, onError }: Props) {
     <p>Connect a Solana wallet and sign a message to verify ownership. No email. No transaction.</p>
     {tk.clientState !== ClientState.Ready ? <p role="status">Loading wallet connections…</p> : providers.length ?
       providers.map(p => <button className="wallet-choice" key={p.info.name} disabled={busy} onClick={() => void choose(p)}>{busy ? 'Waiting for wallet…' : p.info.name}</button>) :
-      <div className="inline-note"><strong>No Solana wallet detected.</strong><p>Open HER in your Phantom or Solflare app’s browser, or enable a Solana wallet extension in your browser.</p><a href="https://phantom.com/download" target="_blank" rel="noreferrer">Get Phantom ↗</a></div>}
+      <div className="inline-note"><strong>No Solana wallet detected.</strong><p>Open ACP in your Phantom or Solflare app’s browser, or enable a Solana wallet extension in your browser.</p><a href="https://phantom.com/download" target="_blank" rel="noreferrer">Get Phantom ↗</a></div>}
     {error && <p className="form-error" role="alert">{error}</p>}
   </dialog>;
 }
