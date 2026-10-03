@@ -136,7 +136,7 @@ function Studio({ id }: { id: string }) {
       { id, mode, messages, brief: context ? `Continue this character's ongoing show, scene ${context.sequence}. No new introduction. Write a new 15-second moment, not a repeat of these earlier lines: ${context.recentScripts.join(" | ").slice(-750)}` : "" },
       signal,
     );
-    if (manifest?.show.continuous && mode === "script") { clip.duration = 15; clip.chatPause = 0; }
+    if (manifest?.show.continuous && mode !== "reply") { clip.duration = 15; clip.chatPause = 0; }
     const job = await api<{ id: string }>("/videos", { id, clip }, signal);
     const deadline = Date.now() + 15 * 60000;
     while (!signal.aborted && Date.now() < deadline) {
