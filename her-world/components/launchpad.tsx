@@ -30,11 +30,14 @@ import {
   localDraftSchema,
   visualFingerprint,
   offlineStatus,
+  samplePortrait,
   type CharacterDraft,
   type LaunchStatus,
 } from "@/lib/launchpad";
 import "./launchpad.css";
 import ShowEditor from "./show-editor";
+import CoinArtwork from "./coin-artwork";
+import { ACP_FEE_WALLET, ACP_QUOTE_MINT } from "@/lib/acp-config";
 
 const STORE = "her-launchpad-drafts-v1";
 type Step = "character" | "personality" | "scene" | "show" | "launch";
@@ -251,7 +254,7 @@ function Home() {
     );
     const a = document.createElement("a");
     a.href = url;
-    a.download = `her-${draft.symbol.toLowerCase() || "untitled"}-character.json`;
+    a.download = `acp-${draft.symbol.toLowerCase() || "untitled"}-character.json`;
     a.click();
     URL.revokeObjectURL(url);
     setNotice("Character package downloaded. No coin or stream was created.");
@@ -342,9 +345,9 @@ function Home() {
   return (
     <main className="lp">
       <header className="lp-header">
-        <a className="lp-logo" href="/" aria-label="HER launchpad">
-          her<span>®</span>
-          <small>CHARACTER LAUNCHPAD</small>
+        <a className="lp-logo" href="/" aria-label="ACP launchpad">
+          acp<span>®</span>
+          <small>ARTIFICIAL CHARACTER PROTOCOL</small>
         </a>
         <nav aria-label="Main navigation">
           <a href="#studio">Create</a>
@@ -674,7 +677,7 @@ function Home() {
                     />
                     <div className="lp-launch-summary">
                       <img
-                        src={draft.image || "/images/launchpad-marcel.png"}
+                        src={draft.image || samplePortrait(draft)}
                         alt="Character preview"
                       />
                       <div>
@@ -689,6 +692,31 @@ function Home() {
                             : "Example artwork — generate your own"}
                         </small>
                       </div>
+                    </div>
+                    <CoinArtwork draft={draft} onChange={edit} />
+                    <a
+                      className="lp-text-link"
+                      href={`/studio/${draft.id}`}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      Open this character’s broadcast studio ↗
+                    </a>
+                    <div className="lp-pair-info">
+                      <strong>NVDAX pair · 1% ACP creator fee</strong>
+                      <p>
+                        Trades use NVIDIA xStock (NVDAX). The 1% creator fee
+                        accrues to ACP’s Pump creator vault in NVDAX; Pump
+                        protocol fees are additional. The platform wallet claims
+                        the accrued fees.
+                      </p>
+                      <a
+                        href="https://pump.fun/docs/custom-pairs"
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        Pair eligibility and issuer terms ↗
+                      </a>
                     </div>
                     <ol className="lp-launch-checklist">
                       <LaunchStep
@@ -720,7 +748,7 @@ function Home() {
                       <LaunchStep
                         number="03"
                         title="Create the coin on pump.fun"
-                        text="Review and approve in your wallet. No initial buy."
+                        text="NVDAX pair. Review the 1% creator fee and approve in your wallet. No initial buy."
                         status={
                           coin.status === "confirmed"
                             ? "Created"
@@ -763,7 +791,7 @@ function Home() {
                         disabled={
                           !!busy ||
                           !status.coinCreation ||
-                          !visualCurrent ||
+                          !draft.coinPfp ||
                           !!coin.signature ||
                           !!coin.mint
                         }
@@ -843,11 +871,11 @@ function Home() {
             </div>
             <div className="lp-preview-image">
               <img
-                src={draft?.image || "/images/launchpad-marcel.png"}
+                src={draft?.image || samplePortrait(draft)}
                 alt={
                   draft?.image
                     ? `Generated portrait of ${draft.name}`
-                    : "Example portrait of Marcel; generate your own character to replace it"
+                    : `Example portrait for ${draft?.name || "your character"}; upload or generate your own reference`
                 }
               />
               {busy === "Generating portrait" && (
@@ -963,6 +991,13 @@ function Home() {
           {filter === "all" ? (
             <>
               <CharacterCard
+                name="Jean-Paul"
+                tag="THE ESPRESSO PHILOSOPHER"
+                image="/images/acp-jean-paul.png"
+                description="One espresso. Several opinions. An original fictional character."
+                action={() => begin("jean-paul")}
+              />
+              <CharacterCard
                 name="Marcel"
                 tag="THE AFTER-HOURS HOST"
                 image="/images/launchpad-marcel.png"
@@ -1000,7 +1035,7 @@ function Home() {
                 key={d.id}
                 name={d.name || "Untitled"}
                 tag="SAVED DRAFT"
-                image={d.image || "/images/launchpad-marcel.png"}
+                image={d.image || samplePortrait(d)}
                 description={d.description}
                 action={() => openDraft(d)}
               />
@@ -1068,7 +1103,7 @@ function Home() {
       </section>
       <footer className="lp-footer">
         <a className="lp-logo" href="/">
-          her<span>®</span>
+          acp<span>®</span>
         </a>
         <p>Invent a character. Give it a world.</p>
         <a href="/collective">
@@ -1100,7 +1135,16 @@ function Home() {
           <dt>Mint address</dt>
           <dd>{review?.mint}</dd>
           <dt>Creator wallet</dt>
+          <dd>{ACP_FEE_WALLET}</dd>
+          <dt>Launch payer</dt>
           <dd>{viewer.wallet}</dd>
+          <dt>Quote asset — NVDAX</dt>
+          <dd>{ACP_QUOTE_MINT}</dd>
+          <dt>ACP creator fee</dt>
+          <dd>
+            1% in NVDAX, accrued to the platform creator vault. Pump protocol
+            fees are additional.
+          </dd>
         </dl>
         <label className="lp-check">
           <input
@@ -1109,7 +1153,8 @@ function Home() {
             onChange={(e) => setConfirm(e.target.checked)}
           />
           <span>
-            I reviewed this coin and understand the transaction is permanent.
+            I reviewed this coin, am eligible under the linked NVDAX issuer
+            terms, and understand the transaction is permanent.
           </span>
         </label>
         <button

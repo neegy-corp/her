@@ -65,6 +65,73 @@ await withDatabase(process.env.DATABASE_URL, async () => {
     null,
   );
   assert.equal((await store.renders(draft.id, other)).length, 0);
+  const photo = {
+    character_id: draft.id,
+    wallet: owner,
+    digest: "identical-test-content",
+    created_at: Date.now(),
+  };
+  for (let slot = 0; slot < 4; slot++)
+    assert.ok(
+      await store.saveAsset({
+        ...photo,
+        id: crypto.randomUUID(),
+        purpose: "reference",
+        slot,
+        digest: `reference-${slot}`,
+        url: `https://example.com/reference-${slot}.png`,
+      }),
+    );
+  assert.equal(
+    await store.saveAsset({
+      ...photo,
+      id: crypto.randomUUID(),
+      purpose: "reference",
+      slot: 0,
+      digest: "racing-upload",
+      url: "https://example.com/race.png",
+    }),
+    null,
+  );
+  await assert.rejects(() =>
+    store.saveAsset({
+      ...photo,
+      id: crypto.randomUUID(),
+      purpose: "reference",
+      slot: 4,
+      digest: "overflow",
+      url: "https://example.com/overflow.png",
+    }),
+  );
+  for (const purpose of ["pfp", "banner"])
+    assert.ok(
+      await store.saveAsset({
+        ...photo,
+        id: crypto.randomUUID(),
+        purpose,
+        slot: 0,
+        url: `https://example.com/${purpose}.png`,
+      }),
+    );
+  const stored = await store.assets(draft.id, owner);
+  assert.equal(stored.filter((a) => a.purpose === "reference").length, 4);
+  assert.equal(stored.length, 6);
+  assert.equal((await store.assets(draft.id, other)).length, 0);
+  await store.saveDraft(
+    {
+      ...edited,
+      coinPfp: "https://example.com/pfp.png",
+      coinBanner: "https://example.com/banner.png",
+    },
+    owner,
+  );
+  assert.equal((await store.ownedDraft(draft.id, owner)).image_url, null);
+  await assert.rejects(() =>
+    store.saveDraft(
+      { ...edited, coinPfp: "https://example.com/not-owned.png" },
+      owner,
+    ),
+  );
   console.log(
     JSON.stringify({
       verified: true,
@@ -74,6 +141,10 @@ await withDatabase(process.env.DATABASE_URL, async () => {
         "cross-owner read/write denied",
         "atomic duplicate render claim",
         "cross-owner renders denied",
+        "four reference slots enforced under duplicate and overflow writes",
+        "PFP and banner stored separately from character reference images",
+        "cross-owner artwork reads denied",
+        "unowned artwork URLs rejected",
       ],
     }),
   );

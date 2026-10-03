@@ -24,6 +24,27 @@ export async function ownedDraft(id: string, owner: string) {
 }
 export async function saveDraft(draft: CharacterDraft, owner: string) {
   const old = await ownedDraft(draft.id, owner);
+  if (old?.mint) {
+    const previous = JSON.parse(old.document) as CharacterDraft;
+    if (
+      (previous.coinPfp || "") !== draft.coinPfp ||
+      (previous.coinBanner || "") !== draft.coinBanner
+    )
+      throw new Error("Deployed coin artwork is locked.");
+  }
+  const storedAssets = await assets(draft.id, owner);
+  for (const [field, purpose] of [
+    ["coinPfp", "pfp"],
+    ["coinBanner", "banner"],
+  ] as const) {
+    if (
+      draft[field] &&
+      !storedAssets.some((a) => a.purpose === purpose && a.url === draft[field])
+    )
+      throw new Error(
+        "Upload coin artwork to this character before saving it.",
+      );
+  }
   if (old && (old.face_status !== "draft" || old.mint)) {
     const previous = JSON.parse(old.document) as CharacterDraft;
     if (
@@ -171,12 +192,14 @@ export type AssetRow = {
   url: string;
   digest: string;
   created_at: number;
+  purpose: "reference" | "pfp" | "banner";
+  slot: number;
 };
 export async function assets(id: string, owner: string) {
   return (
     await db()
       .prepare(
-        "SELECT * FROM her_private.launchpad_assets WHERE character_id=? AND wallet=? ORDER BY created_at ASC LIMIT 3",
+        "SELECT * FROM her_private.launchpad_assets WHERE character_id=? AND wallet=? ORDER BY purpose,slot LIMIT 6",
       )
       .bind(id, owner)
       .all<AssetRow>()
@@ -185,7 +208,7 @@ export async function assets(id: string, owner: string) {
 export async function saveAsset(asset: AssetRow) {
   return db()
     .prepare(
-      "INSERT INTO her_private.launchpad_assets (id,character_id,wallet,url,digest,created_at) VALUES (?,?,?,?,?,?) ON CONFLICT (character_id,digest) DO NOTHING RETURNING id",
+      "INSERT INTO her_private.launchpad_assets (id,character_id,wallet,url,digest,created_at,purpose,slot) VALUES (?,?,?,?,?,?,?,?) ON CONFLICT (character_id,purpose,slot) DO UPDATE SET url=EXCLUDED.url,digest=EXCLUDED.digest,created_at=EXCLUDED.created_at WHERE her_private.launchpad_assets.wallet=EXCLUDED.wallet AND her_private.launchpad_assets.purpose<>'reference' RETURNING id",
     )
     .bind(
       asset.id,
@@ -194,6 +217,8 @@ export async function saveAsset(asset: AssetRow) {
       asset.url,
       asset.digest,
       asset.created_at,
+      asset.purpose,
+      asset.slot,
     )
     .first();
 }

@@ -2,11 +2,12 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "HER — The character launchpad",
-  description: "Create an original AI character. Design its appearance, personality, voice and world, then prepare its pump.fun launch with HER.",
+  title: "ACP — Artificial Character Protocol",
+  description:
+    "Create an original AI character on ACP. Upload references, write the show, design separate coin artwork and prepare a pump.fun launch.",
   icons: {
-    icon: "/olivia-icon.png",
-    shortcut: "/olivia-icon.png",
+    icon: "/acp-icon.svg",
+    shortcut: "/acp-icon.svg",
   },
 };
 

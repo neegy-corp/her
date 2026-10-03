@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import type { CharacterDraft } from "@/lib/launchpad";
 import type { ShowPlan, ShowClip } from "@/lib/show";
+import { REFERENCE_LIMIT } from "@/lib/acp-config";
 type RefPhoto = { id: string; name: string; file: Blob };
 type Render = {
   id: string;
@@ -79,7 +80,10 @@ export default function ShowEditor({
     [renders, setRenders] = useState<Render[]>([]),
     [preview, setPreview] = useState("");
   const show = draft.show;
-  useEffect(() => () => photos.forEach((photo) => URL.revokeObjectURL(photo.url)), [photos]);
+  useEffect(
+    () => () => photos.forEach((photo) => URL.revokeObjectURL(photo.url)),
+    [photos],
+  );
   useEffect(() => {
     let active = true;
     void readPhotos(draft.id)
@@ -118,8 +122,10 @@ export default function ShowEditor({
       setError("Choose a PNG, JPEG or WebP under 4 MB.");
       return;
     }
-    if (photos.length >= 3) {
-      setError("Use up to three reference photos per character.");
+    if (photos.length >= REFERENCE_LIMIT) {
+      setError(
+        "Use one frontal photo and up to three additional reference views.",
+      );
       return;
     }
     try {
@@ -204,6 +210,44 @@ export default function ShowEditor({
       setBusy("");
     }
   }
+  async function writeScene() {
+    if (show.clips.length >= 8) {
+      setError("This show already has eight scenes.");
+      return;
+    }
+    setBusy("script");
+    setError("");
+    try {
+      await call("?action=save", { draft });
+      const response = await fetch("/api/launchpad/scripts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: draft.id,
+          mode: "script",
+          brief: draft.description,
+        }),
+      });
+      const result = (await response.json()) as {
+        error?: string;
+        clip: ShowClip;
+      };
+      if (!response.ok)
+        throw new Error(result.error || "Script generation unavailable.");
+      onChange({ ...show, clips: [...show.clips, result.clip] });
+      onNotice(
+        "AI scene added. Review its script and direction before generating the video.",
+      );
+    } catch (error) {
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Script generation unavailable.",
+      );
+    } finally {
+      setBusy("");
+    }
+  }
   return (
     <div className="lp-show">
       <div className="lp-form-heading">
@@ -215,12 +259,19 @@ export default function ShowEditor({
         </div>
         <Video size={24} />
       </div>
+      <button
+        className="lp-secondary"
+        disabled={!!busy || show.clips.length >= 8}
+        onClick={() => void writeScene()}
+      >
+        {busy === "script" ? "Writing scene…" : "Write a scene with AI"}
+      </button>
       <div className="lp-photo-upload">
         <label>
           <ImagePlus size={23} />
           <strong>Upload reference photos</strong>
           <span>
-            Face, outfit, or setting · up to 3 images · 4 MB each. Uploaded
+            One frontal photo + up to 3 additional views · 4 MB each. Uploaded
             media uses public links for video providers.
           </span>
           <input

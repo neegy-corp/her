@@ -24,9 +24,15 @@ import {
   prepareCoin,
   claimCoin,
   confirmCoin,
+  assets,
 } from "@/lib/launchpad-store";
 import { put } from "@vercel/blob";
-import { createRequire } from "node:module";
+import {
+  acpCoinTerms,
+  buildAcpCreate,
+  checkAcpPair,
+  verifyAcpCoin,
+} from "@/lib/acp-coin";
 import {
   ComputeBudgetProgram,
   Keypair,
@@ -150,6 +156,7 @@ async function get(req: Request) {
       receipt &&
       ["confirmed", "finalized"].includes(receipt.confirmationStatus || "")
     ) {
+      await verifyAcpCoin(connection(), intent.mint);
       await confirmCoin(id, who, intent.mint, intent.signature);
       return json({
         status: "confirmed",
@@ -174,7 +181,7 @@ async function post(req: Request) {
     );
   const who = await owner(req),
     raw = await req.text();
-  if (raw.length > 16000) return json({ error: "Request too large." }, 413);
+  if (raw.length > 26000) return json({ error: "Request too large." }, 413);
   const body = JSON.parse(raw),
     act = action(req);
   if (act === "save") {
@@ -263,7 +270,7 @@ async function post(req: Request) {
       );
     // Keep submitting on an ambiguous timeout: never incur a duplicate paid training request.
     const face = await tavus("faces", {
-      face_name: `HER ${draft.name} ${id.slice(0, 8)}`,
+      face_name: `ACP ${draft.name} ${id.slice(0, 8)}`,
       model_name: "phoenix-4.5",
       train_image_url: row.image_url,
       voice_name: draft.voice,
@@ -282,14 +289,21 @@ async function post(req: Request) {
         },
         503,
       );
+    const artwork = await assets(id, who);
     if (
-      !row.image_url ||
-      row.image_fingerprint !== visualFingerprint(draft) ||
-      !draft.rightsConfirmed
+      !draft.rightsConfirmed ||
+      !draft.coinPfp ||
+      !artwork.some((a) => a.purpose === "pfp" && a.url === draft.coinPfp)
     )
       throw new Error(
-        "Approve a generated character image before creating its coin.",
+        "Upload and approve a separate coin PFP before creating its coin.",
       );
+    if (
+      draft.coinBanner &&
+      !artwork.some((a) => a.purpose === "banner" && a.url === draft.coinBanner)
+    )
+      throw new Error("Upload the selected coin banner before launching.");
+    const quote = await checkAcpPair(connection());
     if (row.mint)
       return json({ error: "This character already has a coin." }, 409);
     const old = await coinIntent(id, who);
@@ -299,6 +313,7 @@ async function post(req: Request) {
       );
     if (old && old.expires > Date.now())
       return json({
+        ...acpCoinTerms,
         unsignedTransaction: old.transaction,
         mint: old.mint,
         expires: old.expires,
@@ -309,8 +324,9 @@ async function post(req: Request) {
       JSON.stringify({
         name: draft.name,
         symbol: draft.symbol,
-        description: `${draft.description}\nFictional AI character created on HER.`,
-        image: row.image_url,
+        description: `${draft.description}\nFictional AI character created on ACP — Artificial Character Protocol.`,
+        image: draft.coinPfp,
+        ...(draft.coinBanner ? { banner: draft.coinBanner } : {}),
         external_url: "https://heronsol.live",
       }),
       {
@@ -323,20 +339,13 @@ async function post(req: Request) {
       ownerKey = new PublicKey(who),
       rpc = connection(),
       latest = await rpc.getLatestBlockhash();
-    // The SDK's ESM build imports a CJS-only Anchor named export. Use its supported require entry.
-    const { PumpSdk } = createRequire(import.meta.url)(
-      "@pump-fun/pump-sdk",
-    ) as typeof import("@pump-fun/pump-sdk");
-    const instruction = await new PumpSdk().createV2Instruction({
+    const instruction = await buildAcpCreate({
       mint: mint.publicKey,
       name: draft.name,
       symbol: draft.symbol,
       uri: metadata.url,
-      creator: ownerKey,
       user: ownerKey,
-      mayhemMode: false,
-      cashback: false,
-      holderReward: false,
+      quoteTokenProgram: quote.quoteTokenProgram,
     });
     const tx = new Transaction({
       feePayer: ownerKey,
@@ -364,6 +373,7 @@ async function post(req: Request) {
     )
       throw new Error("Launch is already in progress.");
     return json({
+      ...acpCoinTerms,
       unsignedTransaction: transaction,
       mint: mint.publicKey.toBase58(),
       expires,
@@ -375,6 +385,7 @@ async function post(req: Request) {
   if (act === "confirm-coin") {
     if (!capabilities().coinCreation)
       return json({ error: "Coin creation is paused." }, 503);
+    await checkAcpPair(connection());
     const intent = await coinIntent(id, who);
     if (!intent || intent.expires < Date.now())
       throw new Error("Launch review expired. Prepare again.");

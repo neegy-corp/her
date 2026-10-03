@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { createFalClient } from "@fal-ai/client";
 import { setting } from "./server";
 import type { ShowClip } from "./show";
+import { REFERENCE_LIMIT } from "./acp-config";
 export const KLING = "fal-ai/kling-video/v3/pro/image-to-video";
 export const falClient = () =>
   createFalClient({ credentials: setting("FAL_KEY") });
@@ -58,9 +59,13 @@ export async function tavusVideo(path: string, body?: unknown) {
   }>;
 }
 export function performanceInput(clip: ShowClip, images: string[]) {
+  if (!images.length || images.length > REFERENCE_LIMIT)
+    throw new Error(
+      "Choose one frontal photo and up to three additional views.",
+    );
   return {
     start_image_url: images[0],
-    prompt: `One fictional adult character. Preserve their identity, wardrobe and setting from the reference. Creative direction: ${JSON.stringify(clip.direction)}. ${clip.script ? `Dialogue: ${JSON.stringify(clip.script)}.` : ""} No captions, subtitles or logos.`,
+    prompt: `${images.length > 1 ? "@Element1 is the only character in this scene." : "One fictional adult character."} Preserve their identity, wardrobe and setting from the reference. Creative direction: ${JSON.stringify(clip.direction)}. ${clip.script ? `Dialogue: ${JSON.stringify(clip.script)}.` : ""} No captions, subtitles or logos.`,
     duration: String(clip.duration) as "5",
     generate_audio: true,
     ...(images.length > 1

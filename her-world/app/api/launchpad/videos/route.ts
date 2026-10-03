@@ -9,6 +9,7 @@ import {
   takeQuota,
 } from "@/lib/launchpad-store";
 import { draftSchema } from "@/lib/launchpad";
+import { clipSchema } from "@/lib/show";
 import {
   digest,
   fundedCreator,
@@ -129,15 +130,19 @@ async function handle(req: Request) {
       const draft = draftSchema.parse(JSON.parse(row.document));
       if (!draft.rightsConfirmed)
         throw new Error("Confirm your character image rights first.");
-      const clip = draft.show.clips.find((c) => c.id === body.clipId);
+      const clip = body.clip
+        ? clipSchema.parse(body.clip)
+        : draft.show.clips.find((c) => c.id === body.clipId);
       if (!clip) throw new Error("Save this scene before generating it.");
       const refs = await assets(id, who),
-        images = [
-          ...(row.image_url ? [row.image_url] : []),
-          ...refs.map((a) => a.url),
-        ]
+        references = refs
+          .filter((a) => a.purpose === "reference")
+          .map((a) => a.url),
+        images = (
+          references.length ? references : row.image_url ? [row.image_url] : []
+        )
           .filter((url, i, all) => all.indexOf(url) === i)
-          .slice(0, 3);
+          .slice(0, 4);
       if (!images.length)
         throw new Error(
           "Upload a reference photo or generate your portrait first.",
