@@ -9,6 +9,7 @@ import {
 } from "@/lib/server";
 import {
   draftSchema,
+  localDraftSchema,
   visualFingerprint,
   type LaunchStatus,
 } from "@/lib/launchpad";
@@ -50,7 +51,7 @@ function capabilities(): LaunchStatus {
     generation:
       storage &&
       setting("HER_LAUNCHPAD_GENERATION_ENABLED") === "true" &&
-      !!setting("OPENAI_API_KEY") &&
+      !!(setting("HF_API_KEY") || setting("OPENAI_API_KEY")) &&
       !!setting("BLOB_READ_WRITE_TOKEN"),
     faces:
       storage &&
@@ -63,6 +64,7 @@ function capabilities(): LaunchStatus {
       !!setting("SOLANA_RPC_URL"),
     // A configured camera is not evidence of a supported multi-tenant broadcaster.
     broadcast: false,
+    imageProvider: setting("HF_API_KEY") ? "higgsfield" : "openai",
     message: storage
       ? "Character drafts are open. Live launch services are being connected."
       : "Design and save locally. Cloud launch services are not activated yet.",
@@ -185,7 +187,7 @@ async function post(req: Request) {
   const body = JSON.parse(raw),
     act = action(req);
   if (act === "save") {
-    const draft = draftSchema.parse(body.draft);
+    const draft = localDraftSchema.parse(body.draft);
     await takeQuota(`save:${who}`, 200);
     await saveDraft(draft, who);
     return json({ saved: true, id: draft.id });

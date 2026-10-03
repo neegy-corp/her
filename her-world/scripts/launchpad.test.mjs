@@ -43,6 +43,9 @@ const { imageType, performanceInput, safeVideoUrl } =
 const route = await import("../app/api/launchpad/route.ts");
 const videos = await import("../app/api/launchpad/videos/route.ts");
 const assets = await import("../app/api/launchpad/assets/route.ts");
+const portrait = await import("../app/api/launchpad/portrait/route.ts");
+const { hfVideoInput, hfPortraitInput, providerMediaUrl, higgsfield } = await import("../lib/higgsfield.ts");
+const { creatorPath, readLocalDrafts, keepDraft } = await import("../lib/creator-navigation.ts");
 const scripts = await import("../app/api/launchpad/scripts/route.ts");
 const studio = await import("../app/api/launchpad/studio/route.ts");
 const { ShowRunner } = await import("../lib/show-runner.ts");
@@ -185,7 +188,7 @@ test("disabled storage and unauthenticated jobs cannot invoke paid providers", a
   ).json();
   assert.equal(status.storage, false);
   assert.equal(status.broadcast, false);
-  for (const handler of [videos.POST, assets.POST, scripts.POST, studio.GET]) {
+  for (const handler of [videos.POST, assets.POST, scripts.POST, studio.GET, portrait.POST, portrait.GET]) {
     const response = await handler(
       new Request("http://localhost/api/launchpad/videos", {
         method: "POST",
@@ -756,4 +759,52 @@ test("stop during WHIP connection cannot resurrect an old stream or disconnect a
     globalThis.fetch = oldFetch;
     globalThis.RTCPeerConnection = oldPeer;
   }
+});
+
+test("separate character routes retain incomplete drafts and exact identity", () => {
+  const first = newDraft(), second = newDraft();
+  first.name = "First"; second.name = "Second";
+  const saved = keepDraft([first], second);
+  assert.equal(readLocalDrafts(JSON.stringify(saved)).find(d => d.id === first.id).name, "First");
+  assert.equal(creatorPath(second.id, "artwork"), `/create/${second.id}/artwork`);
+  assert.equal(creatorPath(first.id, "show"), `/create/${first.id}/show`);
+  assert.deepEqual(readLocalDrafts('corrupt'), []);
+  assert.deepEqual(readLocalDrafts('[{"id":"fake"}]'), []);
+  assert.equal(keepDraft(saved, {...first, name:"Edited"}).length, 2);
+});
+
+test("Higgsfield receives all selected reference views and native dialogue", () => {
+  const clip = defaultShow().clips[0];
+  const photos = [1,2,3,4].map(n => `https://example.com/${n}.jpg`);
+  const input = hfVideoInput(clip, photos);
+  assert.deepEqual(input.image_urls, photos);
+  assert.equal(input.sound, "on");
+  assert.equal(input.duration, clip.duration);
+  assert.ok(input.prompt.includes(clip.script));
+  assert.equal(input.aspect_ratio, "9:16");
+  assert.throws(() => hfVideoInput(clip, []));
+  assert.throws(() => hfVideoInput(clip, [...photos, photos[0]]));
+  assert.equal(hfPortraitInput(newDraft()).batch_size, 1);
+});
+
+test("generated-media persistence rejects arbitrary or credentialed destinations", () => {
+  assert.equal(providerMediaUrl('https://images.higgs.ai/output.jpg'), 'https://images.higgs.ai/output.jpg');
+  for (const url of ['http://images.higgs.ai/file', 'https://localhost/file', 'https://169.254.169.254/', 'https://images.higgs.ai.evil.test/file', 'https://user:secret@images.higgs.ai/file']) assert.throws(() => providerMediaUrl(url));
+});
+
+test("Higgsfield credentials stay server side and ambiguous submissions never auto-retry", async () => {
+  const oldFetch = globalThis.fetch, oldKey = process.env.HF_API_KEY;
+  let calls = 0;
+  try {
+    process.env.HF_API_KEY = 'test-only-credential';
+    globalThis.fetch = async (url, options) => {
+      calls++;
+      assert.equal(url, 'https://api.higgsfield.ai/kling-video/o3/image-reference');
+      assert.equal(options.headers.Authorization, 'Key test-only-credential');
+      assert.equal(options.redirect, 'error');
+      throw new Error('simulated timeout');
+    };
+    await assert.rejects(higgsfield('kling-video/o3/image-reference', {}));
+    assert.equal(calls, 1);
+  } finally { globalThis.fetch = oldFetch; if (oldKey === undefined) delete process.env.HF_API_KEY; else process.env.HF_API_KEY = oldKey; }
 });

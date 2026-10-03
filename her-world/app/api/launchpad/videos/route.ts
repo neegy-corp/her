@@ -19,6 +19,7 @@ import {
   performanceInput,
   safeVideoUrl,
 } from "@/lib/launchpad-media";
+import { HF_VIDEO, PORTRAIT_CLIP, higgsfield, hfVideoInput, persistHfMedia } from "@/lib/higgsfield";
 export const runtime = "nodejs";
 export const maxDuration = 60;
 async function handle(req: Request) {
@@ -50,7 +51,7 @@ async function handle(req: Request) {
           404,
         );
       if (req.method === "GET") {
-        const saved = await renders(id, who);
+        const saved = (await renders(id, who)).filter(r => r.clip_id !== PORTRAIT_CLIP);
         for (const render of saved
           .filter((r) => r.status === "queued" && r.provider_id)
           .slice(0, 4)) {
@@ -78,6 +79,16 @@ async function handle(req: Request) {
                   "failed",
                   null,
                 );
+                render.status = "failed";
+              }
+            } else if (render.provider === "higgsfield") {
+              const result = await higgsfield(`requests/${encodeURIComponent(render.provider_id!)}/status`);
+              if (result.status === "completed" && result.video?.url) {
+                const url = await persistHfMedia(result.video.url, id, render.id, "video");
+                await updateRender(render.id, who, render.provider_id, "ready", url);
+                render.status = "ready"; render.video_url = url;
+              } else if (["failed", "nsfw", "canceled"].includes(result.status || "")) {
+                await updateRender(render.id, who, render.provider_id, "failed", null);
                 render.status = "failed";
               }
             } else {
@@ -147,8 +158,9 @@ async function handle(req: Request) {
         throw new Error(
           "Upload a reference photo or generate your portrait first.",
         );
+      const provider = clip.mode === "speech" && row.face_status === "ready" && row.face_id && setting("TAVUS_API_KEY") ? "tavus" : setting("HF_API_KEY") ? "higgsfield" : clip.mode === "speech" ? "tavus" : "fal";
       if (
-        clip.mode === "speech" &&
+        provider === "tavus" &&
         (!row.face_id ||
           row.face_status !== "ready" ||
           !setting("TAVUS_API_KEY"))
@@ -156,14 +168,15 @@ async function handle(req: Request) {
         throw new Error(
           "Train this character’s face before rendering scripted speech.",
         );
-      if (clip.mode === "performance" && !setting("FAL_KEY"))
+      if (clip.mode === "performance" && !setting("FAL_KEY") && !setting("HF_API_KEY"))
         throw new Error("The motion video provider is not connected.");
+      if (provider === "higgsfield" && !setting("BLOB_READ_WRITE_TOKEN")) throw new Error("Generated video storage is not connected.");
       if (!clip.script.trim() && !clip.direction.trim())
         throw new Error("Write a script or stage direction first.");
       if (clip.mode === "speech" && !clip.script.trim())
         throw new Error("Write the words this character should say.");
       const fingerprint = digest(
-        JSON.stringify({ clip, images, face: row.face_id }),
+        JSON.stringify({ clip, images, face: row.face_id, provider }),
       );
       const existing = (await renders(id, who)).find(
         (r) => r.clip_id === clip.id && r.fingerprint === fingerprint,
@@ -176,7 +189,7 @@ async function handle(req: Request) {
         wallet: who,
         clip_id: clip.id,
         fingerprint,
-        provider: clip.mode === "speech" ? "tavus" : "fal",
+        provider,
         provider_id: null,
         status: "submitting",
         video_url: null,
@@ -191,7 +204,7 @@ async function handle(req: Request) {
         );
       // Persist before any charge. A timeout remains submitting; never automatically submit twice.
       const requestId =
-        clip.mode === "speech"
+        provider === "tavus"
           ? (
               await tavusVideo("", {
                 replica_id: row.face_id,
@@ -199,7 +212,7 @@ async function handle(req: Request) {
                 video_name: `${draft.name}: ${clip.title}`,
               })
             ).video_id
-          : (
+          : provider === "higgsfield" ? (await higgsfield(HF_VIDEO, hfVideoInput(clip, images))).request_id : (
               await falClient().queue.submit(KLING, {
                 input: performanceInput(clip, images),
               })

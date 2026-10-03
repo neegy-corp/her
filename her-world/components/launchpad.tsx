@@ -28,7 +28,6 @@ import {
   scenes,
   voices,
   exportDraft,
-  localDraftSchema,
   visualFingerprint,
   offlineStatus,
   samplePortrait,
@@ -40,14 +39,16 @@ import "./acp-pages.css";
 import ShowEditor from "./show-editor";
 import CoinArtwork from "./coin-artwork";
 import { ACP_FEE_WALLET, ACP_QUOTE_MINT } from "@/lib/acp-config";
+import { DRAFT_STORE, creatorPath, readLocalDrafts, keepDraft, type CreatorStep } from "@/lib/creator-navigation";
 
-const STORE = "her-launchpad-drafts-v1";
-type Step = "character" | "personality" | "scene" | "show" | "launch";
+const STORE = DRAFT_STORE;
+type Step = CreatorStep;
 const steps = [
   { id: "character", label: "Character", icon: Palette },
   { id: "personality", label: "Voice", icon: Mic2 },
   { id: "scene", label: "The scene", icon: Monitor },
   { id: "show", label: "The show", icon: Layers3 },
+  { id: "artwork", label: "Coin artwork", icon: Palette },
   { id: "launch", label: "Launch", icon: Radio },
 ] as const;
 type CloudDraft = CharacterDraft & {
@@ -70,18 +71,19 @@ async function request<T>(action: string, body?: unknown): Promise<T> {
   if (!r.ok) throw new Error(data.error || "Could not complete the request.");
   return data;
 }
-export default function Launchpad() {
+type EditorProps = { characterId?: string; initialStep?: Step };
+export default function Launchpad(props: EditorProps) {
   return (
     <WalletRoot>
-      <Home />
+      <Home {...props} />
     </WalletRoot>
   );
 }
-function Home() {
+function Home({ characterId, initialStep = "character" }: EditorProps) {
   const { viewer, connect, signTransaction, disconnect } = useWallet();
   const [draft, setDraft] = useState<CharacterDraft | null>(null),
     [saved, setSaved] = useState<CharacterDraft[]>([]),
-    [step, setStep] = useState<Step>("character");
+    [step] = useState<Step>(initialStep);
   const [status, setStatus] = useState<LaunchStatus>(offlineStatus),
     [busy, setBusy] = useState(""),
     [notice, setNotice] = useState(""),
@@ -102,23 +104,17 @@ function Home() {
     [confirm, setConfirm] = useState(false),
     [showHelp, setShowHelp] = useState(false);
   const [activeVoice, setActiveVoice] = useState("");
+  const [portraitStatus, setPortraitStatus] = useState("");
   const audio = useRef<HTMLAudioElement | null>(null),
     studio = useRef<HTMLElement | null>(null),
     modal = useRef<HTMLDialogElement | null>(null);
   useEffect(() => {
     try {
-      const data = JSON.parse(localStorage.getItem(STORE) || "[]");
-      const valid = Array.isArray(data)
-        ? data
-            .map((x) => localDraftSchema.safeParse(x))
-            .filter((x) => x.success)
-            .map((x) => x.data as CharacterDraft)
-            .slice(0, 12)
-        : [];
+      const valid = readLocalDrafts(localStorage.getItem(STORE));
       setSaved(valid);
-      setDraft(valid[0] || newDraft());
+      setDraft(characterId ? valid.find(d => d.id === characterId) || null : newDraft());
     } catch {
-      setDraft(newDraft());
+      setDraft(characterId ? null : newDraft());
     }
     setLoaded(true);
     request<LaunchStatus>("status")
@@ -131,7 +127,20 @@ function Home() {
         }),
       );
     return () => audio.current?.pause();
-  }, []);
+  }, [characterId]);
+  useEffect(() => {
+    if (!characterId || !viewer.wallet || !loaded) return;
+    let cancelled = false;
+    request<{ drafts: CloudDraft[] }>("drafts").then(({ drafts }) => {
+      if (cancelled) return;
+      const remote = drafts.find(d => d.id === characterId);
+      if (!remote) return;
+      setDraft(local => !local || remote.updatedAt > local.updatedAt ? remote : local);
+      setFaceStatus(remote.faceStatus || "draft");
+      setCoin(remote.mint ? { mint: remote.mint, signature: remote.signature, status: "confirmed" } : {});
+    }).catch(() => { if (!cancelled) setError("Could not load your wallet copy. Local changes are preserved."); });
+    return () => { cancelled = true; };
+  }, [characterId, viewer.wallet, loaded]);
   useEffect(() => {
     if (!loaded || !draft) return;
     setLocalSaved(false);
@@ -160,25 +169,18 @@ function Home() {
     setError("");
     setReview(null);
   }
-  function begin(preset = "blank") {
-    if (draft)
-      setSaved((p) =>
-        [draft, ...p.filter((x) => x.id !== draft.id)].slice(0, 12),
-      );
-    const d = newDraft(preset);
-    if (preset === "blank")
-      Object.assign(d, {
-        name: "",
-        symbol: "",
-        description: "",
-        appearance: "",
-        personality: "",
-      });
-    setDraft(d);
-    setFaceStatus("draft");
-    setCoin({});
-    setStep("character");
-    studio.current?.scrollIntoView({ behavior: "smooth" });
+  function persistCurrent() {
+    if (!draft) return true;
+    try {
+      localStorage.setItem(STORE, JSON.stringify(keepDraft(readLocalDrafts(localStorage.getItem(STORE)), draft)));
+      return true;
+    } catch { setError("Browser storage is full. Download your draft before leaving."); return false; }
+  }
+  function setStep(next: Step) {
+    if (draft && persistCurrent()) window.location.assign(creatorPath(draft.id, next));
+  }
+  function begin() {
+    if (persistCurrent()) window.location.assign("/create");
   }
   async function task(label: string, work: () => Promise<void>) {
     setBusy(label);
@@ -211,6 +213,10 @@ function Home() {
     }
     await task("Generating portrait", async () => {
       await request("save", { draft });
+      if (status.imageProvider === "higgsfield") {
+        await portraitRequest("POST");
+        return;
+      }
       const image = await request<{ image: string; imageFingerprint: string }>(
         "generate",
         { id: draft.id },
@@ -220,6 +226,17 @@ function Home() {
         "Portrait generated. Review it before training your live character.",
       );
     });
+  }
+  async function portraitRequest(method: "GET" | "POST") {
+    if (!draft) return;
+    const result = await fetch(`/api/launchpad/portrait?id=${encodeURIComponent(draft.id)}`, { method });
+    const body = await result.json() as { status: string; image?: string; imageFingerprint?: string; error?: string };
+    if (!result.ok) throw new Error(body.error || "Could not check your portrait.");
+    setPortraitStatus(body.status);
+    if (body.status === "ready" && body.image && body.imageFingerprint) {
+      setDraft(d => d?.id === draft.id ? { ...d, image: body.image!, imageFingerprint: body.imageFingerprint! } : d);
+      setNotice("Higgsfield portrait saved. Review it before using it in the show.");
+    } else setNotice(body.status === "failed" ? "Higgsfield could not generate this portrait. Adjust your appearance or scene before trying again." : body.status === "none" ? "No portrait job for the current appearance and background." : `Portrait ${body.status}. Use Check portrait to refresh this saved job without another charge.`);
   }
   async function train() {
     if (!draft) return;
@@ -279,35 +296,6 @@ function Home() {
       setError("Browser blocked the audio preview. Try again.");
     });
   }
-  async function restoreCloud() {
-    if (!viewer.wallet) {
-      connect();
-      return;
-    }
-    await task("Loading characters", async () => {
-      const r = await request<{ drafts: CloudDraft[] }>("drafts");
-      if (!r.drafts.length) {
-        setNotice(
-          "No wallet-saved characters yet. Save your first draft below.",
-        );
-        return;
-      }
-      setSaved(r.drafts);
-      openDraft(r.drafts[0]);
-      setNotice("Wallet drafts loaded.");
-    });
-  }
-  function openDraft(d: CloudDraft) {
-    setDraft(d);
-    setFaceStatus(d.faceStatus || "draft");
-    setCoin(
-      d.mint
-        ? { mint: d.mint, status: "confirmed", signature: d.signature }
-        : {},
-    );
-    setStep("character");
-    studio.current?.scrollIntoView({ behavior: "smooth" });
-  }
   async function prepare() {
     if (!draft) return;
     await task("Preparing launch", async () => {
@@ -353,6 +341,7 @@ function Home() {
         <nav aria-label="Main navigation">
           <a href="/create">Create</a>
           <a href="/tokens">Tokens</a>
+          <a href="/developer" onClick={e => { if (!persistCurrent()) e.preventDefault(); }}>Developer</a>
           <a href="/collective">
             HER collective <ArrowUpRight size={13} />
           </a>
@@ -370,7 +359,7 @@ function Home() {
           <div>
             <span className="lp-kicker">THE CHARACTER STUDIO / 001</span>
             <h1 className="acp-studio-title">
-              Create your <em>character.</em>
+              {step === "character" ? <>Create your <em>character.</em></> : <>{draft?.name || "Your character"}<em> / {steps.find(s => s.id === step)?.label}</em></>}
             </h1>
             <p className="acp-studio-intro">
               Start with reference images. Direct the action, write the script,
@@ -391,30 +380,29 @@ function Home() {
           <div className="lp-editor">
             <div
               className="lp-tabs"
-              role="tablist"
+              role="navigation"
               aria-label="Character editor"
             >
               {steps.map((s) => (
-                <button
-                  role="tab"
+                <a
                   id={`tab-${s.id}`}
-                  aria-controls="studio-panel"
-                  aria-selected={step === s.id}
+                  aria-current={step === s.id ? "page" : undefined}
                   key={s.id}
-                  onClick={() => setStep(s.id)}
+                  href={draft ? creatorPath(draft.id, s.id) : "#"}
+                  onClick={e => { if (!draft || !persistCurrent()) e.preventDefault(); }}
                 >
                   <s.icon size={17} />
                   <span>{s.label}</span>
-                </button>
+                </a>
               ))}
             </div>
             {!draft ? (
-              <div className="lp-form">Opening your studio…</div>
+              <div className="lp-form">{loaded ? <>This character is not saved on this device. Connect its owner wallet to load it, or <a href="/developer">open your developer dashboard</a>.</> : "Opening your studio…"}</div>
             ) : (
               <div
                 className="lp-form"
                 id="studio-panel"
-                role="tabpanel"
+                role="region"
                 aria-labelledby={`tab-${step}`}
               >
                 {step === "character" && (
@@ -487,6 +475,7 @@ function Home() {
                         ? "Creating your portrait…"
                         : "Generate character portrait"}
                     </button>
+                    {status.imageProvider === "higgsfield" && <button className="lp-secondary" disabled={!!busy} onClick={() => void task("Checking portrait", () => portraitRequest("GET"))}>Check portrait {portraitStatus && `· ${portraitStatus}`}</button>}
                     {!status.generation && (
                       <p className="lp-field-note">
                         Generation is opening soon. Design, save and export your
@@ -551,8 +540,9 @@ function Home() {
                       ))}
                     </div>
                     <p className="lp-field-note">
-                      Tavus stock voice samples. Your live face uses the voice
-                      selected here.
+                      Tavus speech clips use this stock voice. Higgsfield motion
+                      clips generate their own audio; these samples do not select
+                      a Higgsfield voice.
                     </p>
                     <button
                       className="lp-next"
@@ -624,6 +614,7 @@ function Home() {
                     onImage={(image) => edit(image)}
                   />
                 )}
+                {step === "artwork" && <><FormTitle kicker="THE TOKEN IDENTITY" title="Give the coin its own look." /><CoinArtwork draft={draft} onChange={edit} /><button className="lp-next" onClick={() => setStep("launch")}>Continue to launch <ArrowRight size={16} /></button></>}
                 {step === "launch" && (
                   <>
                     <FormTitle
@@ -648,7 +639,7 @@ function Home() {
                         </small>
                       </div>
                     </div>
-                    <CoinArtwork draft={draft} onChange={edit} />
+                    <a className="lp-text-link" href={creatorPath(draft.id, "artwork")} onClick={e => { if (!persistCurrent()) e.preventDefault(); }}>Edit coin PFP & banner ↗</a>
                     <a
                       className="lp-text-link"
                       href={`/studio/${draft.id}`}
@@ -686,10 +677,10 @@ function Home() {
                       />
                       <LaunchStep
                         number="02"
-                        title="Train the live face"
+                        title="Optional: train a talking face"
                         text={
                           faceStatus === "draft"
-                            ? "Your portrait and voice become a talking character."
+                            ? "For Tavus speech clips. Motion videos and coin creation do not require this."
                             : `Training status: ${faceStatus}`
                         }
                         status={
@@ -900,57 +891,6 @@ function Home() {
             </button>
           </div>
         )}
-      </section>
-      <section className="lp-discover" id="characters">
-        <div className="lp-section-top">
-          <div>
-            <span className="lp-kicker">YOUR WORKSPACE</span>
-            <h2>
-              Your characters.
-              <br />
-              <em>Pick up where you left off.</em>
-            </h2>
-          </div>
-          <div className="lp-discover-actions">
-            <button className="lp-primary" onClick={() => begin()}>
-              New character <Plus size={16} />
-            </button>
-            <button
-              className="lp-text-link"
-              onClick={() => void restoreCloud()}
-              disabled={!!busy}
-            >
-              <Wallet size={14} /> Load wallet drafts
-            </button>
-          </div>
-        </div>
-        <div className="lp-character-grid">
-          {saved.length ? (
-            saved.map((d) => (
-              <CharacterCard
-                key={d.id}
-                name={d.name || "Untitled"}
-                tag="SAVED DRAFT"
-                image={d.image || samplePortrait(d)}
-                description={d.description}
-                action={() => openDraft(d)}
-              />
-            ))
-          ) : (
-            <div className="lp-empty">
-              <Layers3 size={28} />
-              <h3>Your cast starts here.</h3>
-              <p>
-                Create a character in the studio. It saves on this device as you
-                work.
-              </p>
-            </div>
-          )}
-        </div>
-        <p className="lp-examples-note">
-          Private drafts stay here. Confirmed coin launches appear in the token
-          directory.
-        </p>
       </section>
       <footer className="lp-footer">
         <a className="lp-logo" href="/">

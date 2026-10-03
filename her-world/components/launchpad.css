@@ -314,7 +314,7 @@
   border-bottom: 1px solid var(--lp-line);
   padding: 0 12px;
 }
-.lp-tabs button {
+.lp-tabs a {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -327,12 +327,12 @@
   color: #7a8477;
   font-size: 11px;
 }
-.lp-tabs button[aria-selected="true"] {
+.lp-tabs a[aria-current="page"] {
   border-bottom-color: var(--lp-ink);
   color: var(--lp-ink);
   font-weight: 600;
 }
-.lp-tabs button:hover {
+.lp-tabs a:hover {
   background: #eef1e7;
 }
 .lp-form {
@@ -1162,11 +1162,11 @@
   .lp-tabs {
     padding: 0 4px;
   }
-  .lp-tabs button {
+  .lp-tabs a {
     font-size: 9px;
     gap: 5px;
   }
-  .lp-tabs button svg {
+  .lp-tabs a svg {
     width: 14px;
   }
   .lp-preview {
@@ -1285,7 +1285,7 @@
   .lp-tabs {
     padding: 0 6px;
   }
-  .lp-tabs button {
+  .lp-tabs a {
     padding: 13px 2px;
     gap: 5px;
     min-height: 62px;
@@ -1414,7 +1414,7 @@
   }
 }
 .lp-tabs {
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(6, 1fr);
 }
 .lp-photo-upload {
   border: 1px dashed #9ead94;
@@ -1663,7 +1663,7 @@
   .lp-reference-grid {
     grid-template-columns: repeat(2, 1fr);
   }
-  .lp-tabs button {
+  .lp-tabs a {
     font-size: 8px;
   }
 }

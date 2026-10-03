@@ -9,7 +9,7 @@ import {
   saveImage,
   coinIntent,
 } from "@/lib/launchpad-store";
-import { draftSchema, visualFingerprint } from "@/lib/launchpad";
+import { localDraftSchema, visualFingerprint } from "@/lib/launchpad";
 import { digest, imageType, fundedCreator } from "@/lib/launchpad-media";
 import { assetPurpose, REFERENCE_LIMIT } from "@/lib/acp-config";
 export const runtime = "nodejs";
@@ -32,7 +32,6 @@ export async function POST(req: Request) {
           },
           503,
         );
-      fundedCreator(who);
       // Reject oversized/chunked payloads before buffering them on the server.
       const size = Number(req.headers.get("content-length"));
       if (!size || size > 4400000)
@@ -45,7 +44,7 @@ export async function POST(req: Request) {
         return json({ error: "Choose an image under 4 MB." }, 400);
       const row = await ownedDraft(id, who);
       if (!row) return json({ error: "Save this character first." }, 404);
-      const draft = draftSchema.parse(JSON.parse(row.document));
+      const draft = localDraftSchema.parse(JSON.parse(row.document));
       const intent = await coinIntent(id, who);
       if (
         purpose !== "reference" &&
@@ -79,6 +78,7 @@ export async function POST(req: Request) {
       if (slot === undefined)
         throw new Error("This character already has four reference photos.");
       await takeQuota(`upload:${who}`, 15);
+      await takeQuota("upload:platform", 200);
       const result = await put(
         `characters/${id}/${purpose}-${crypto.randomUUID()}.${type.ext}`,
         bytes,

@@ -106,6 +106,7 @@ export type LaunchStatus = {
   faces: boolean;
   coinCreation: boolean;
   broadcast: boolean;
+  imageProvider?: "higgsfield" | "openai";
   message: string;
 };
 export const offlineStatus: LaunchStatus = {

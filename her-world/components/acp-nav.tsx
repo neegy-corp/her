@@ -1,5 +1,5 @@
 import Link from "next/link";
-export function AcpNav({ active }: { active?: "create" | "tokens" }) {
+export function AcpNav({ active }: { active?: "create" | "tokens" | "developer" }) {
   return (
     <header className="lp-header">
       <Link className="lp-logo" href="/" aria-label="ACP home">
@@ -20,6 +20,7 @@ export function AcpNav({ active }: { active?: "create" | "tokens" }) {
           Tokens
         </Link>
         <Link href="/collective">HER collective ↗</Link>
+        <Link href="/developer" aria-current={active === "developer" ? "page" : undefined}>Developer</Link>
       </nav>
       <Link className="lp-primary acp-nav-cta" href="/create">
         Open studio ↗

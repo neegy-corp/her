@@ -28,13 +28,14 @@ export async function GET(req: Request) {
         .filter((url, i, all) => all.indexOf(url) === i)
         .slice(0, 4);
       const clips = draft.show.clips.map((clip) => {
-        const fingerprint = digest(
+        const legacyFingerprint = digest(
           JSON.stringify({ clip, images: inputs, face: row.face_id }),
         );
         const render = jobs.find(
           (r) =>
             r.clip_id === clip.id &&
-            r.fingerprint === fingerprint &&
+            (r.fingerprint === digest(JSON.stringify({ clip, images: inputs, face: row.face_id, provider: r.provider })) ||
+              (r.provider !== "higgsfield" && r.fingerprint === legacyFingerprint)) &&
             r.status === "ready" &&
             r.video_url,
         );

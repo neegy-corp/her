@@ -493,7 +493,7 @@ function Studio({ id }: { id: string }) {
             </h1>
             <p>Play the show. Hear from chat. Let the next scene unfold.</p>
           </div>
-          <a href="/create" className="lp-text-link">
+          <a href={`/create/${id}/show`} className="lp-text-link">
             ← Back to creation
           </a>
         </div>
