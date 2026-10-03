@@ -13,7 +13,7 @@ export function WalletRoot({children}:{children:ReactNode}){
  useEffect(()=>{api<PublicConfig>('config').then(setConfig).catch(()=>setNotice('Connection settings are unavailable. You can still browse.'));void refresh().catch(()=>{});},[]);
  function connect(){if(!bridge){pendingConnect.current=true;setRequested(true);setNotice('Loading wallet connections…');return;}bridge.connect();}
  const signTransaction=async(hex:string)=>{if(!bridge)throw new Error('Connect your wallet first.');return bridge.signTransaction(hex);};
- async function disconnect(){await api('logout',{});setViewer(emptyViewer);await bridge?.disconnect().catch(()=>{});setNotice('Wallet disconnected from HER.');}
+ async function disconnect(){await api('logout',{});setViewer(emptyViewer);await bridge?.disconnect().catch(()=>{});setNotice('Wallet disconnected from ACP.');}
  return <Context.Provider value={{config,viewer,refresh,connect,signTransaction,disconnect,notice,setNotice}}>{requested&&<Suspense fallback={null}><TurnkeyBridge config={config} onReady={onReady} onConnected={refresh} onError={setNotice}/></Suspense>}{children}{notice&&<div className="notice" role="status"><p>{notice}</p><button onClick={()=>setNotice('')} aria-label="Dismiss notice">×</button></div>}</Context.Provider>;
 }
 export const useWallet=()=>useContext(Context);

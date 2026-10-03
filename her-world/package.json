@@ -74,6 +74,9 @@
   "overrides": {
     "miniflare": {
       "sharp": "0.35.4"
+    },
+    "rpc-websockets": {
+      "uuid": "11.1.0"
     }
   }
 }

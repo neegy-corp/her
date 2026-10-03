@@ -69,7 +69,7 @@ function Connector({ onReady, onConnected, onError }: Props) {
   const providers = tk.walletProviders.filter(p => String(p.chainInfo.namespace).toLowerCase().includes('solana'));
   return <dialog ref={modal} className="wallet-dialog" onCancel={() => setOpen(false)} aria-label="Connect wallet">
     <button className="close" onClick={() => setOpen(false)} aria-label="Close wallet dialog">×</button>
-    <span className="eyebrow">POWERED BY TURNKEY</span><h2>Your wallet.<br/>Your place in HER.</h2>
+    <span className="eyebrow">POWERED BY TURNKEY</span><h2>Your wallet.<br/>Your place in ACP.</h2>
     <p>Connect a Solana wallet and sign a message to verify ownership. No email. No transaction.</p>
     {tk.clientState !== ClientState.Ready ? <p role="status">Loading wallet connections…</p> : providers.length ?
       providers.map(p => <button className="wallet-choice" key={p.info.name} disabled={busy} onClick={() => void choose(p)}>{busy ? 'Waiting for wallet…' : p.info.name}</button>) :

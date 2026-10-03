@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { registerHooks, createRequire } from "node:module";
 import { existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
+import { execFileSync } from "node:child_process";
 import {
   defaultShow,
   initialShow,
@@ -57,6 +58,18 @@ const { ACP_QUOTE_MINT, ACP_FEE_WALLET, assetPurpose } = await import(
 );
 const { Keypair, PublicKey, Transaction } = await import("@solana/web3.js");
 const { TOKEN_2022_PROGRAM_ID } = await import("@solana/spl-token");
+test("Pump SDK loads without Node's experimental CommonJS-to-ESM bridge", () => {
+  const result = execFileSync(
+    process.execPath,
+    [
+      "--no-experimental-require-module",
+      "-e",
+      "const sdk=require('@pump-fun/pump-sdk');if(!sdk.PumpSdk)process.exit(1)",
+    ],
+    { cwd: fileURLToPath(root), encoding: "utf8", stdio: "pipe" },
+  );
+  assert.equal(typeof result, "string");
+});
 const plan = () => ({ ...defaultShow(), chatWindow: 15, maxGenerations: 1 });
 test("unfinished local drafts survive autosave without passing launch validation", () => {
   const draft = { ...newDraft(), name: "", symbol: "", appearance: "" };
