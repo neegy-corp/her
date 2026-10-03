@@ -52,6 +52,7 @@ const { ShowRunner } = await import("../lib/show-runner.ts");
 const { validateWhipEndpoint } = await import("../lib/whip-publisher.ts");
 const { normalizeChat } = await import("../lib/pump-chat.ts");
 const { scriptToClip, scriptMessages } = await import("../lib/acp-script.ts");
+const { generateScene } = await import("../lib/script-provider.ts");
 const { assertPairSupport, buildAcpCreate } =
   await import("../lib/acp-coin.ts");
 const { ACP_QUOTE_MINT, ACP_FEE_WALLET, assetPurpose } =
@@ -807,4 +808,33 @@ test("Higgsfield credentials stay server side and ambiguous submissions never au
     await assert.rejects(higgsfield('kling-video/o3/image-reference', {}));
     assert.equal(calls, 1);
   } finally { globalThis.fetch = oldFetch; if (oldKey === undefined) delete process.env.HF_API_KEY; else process.env.HF_API_KEY = oldKey; }
+});
+
+test("Claude scene uses the authenticated server API and forced bounded scene tool", async () => {
+  const oldFetch = globalThis.fetch, oldKey = process.env.ANTHROPIC_API_KEY;
+  try {
+    process.env.ANTHROPIC_API_KEY = 'test-only-key\n';
+    globalThis.fetch = async (url, options) => {
+      assert.equal(url, 'https://api.anthropic.com/v1/messages');
+      assert.equal(options.headers['x-api-key'], 'test-only-key');
+      const body = JSON.parse(options.body);
+      assert.ok(body.system.includes('character'));
+      assert.ok(body.messages.every(m => m.role !== 'system'));
+      assert.equal(body.tool_choice.name, 'write_scene');
+      return Response.json({stop_reason:'tool_use',content:[{type:'tool_use',name:'write_scene',input:{title:'Test',script:'Hello, chat.',direction:'Look at camera.',duration:5}}]});
+    };
+    assert.equal(scriptToClip(await generateScene([{role:'system',content:'character'},{role:'user',content:'hello'}]), 'script').script,'Hello, chat.');
+    let calls=0;
+    globalThis.fetch=async()=>{calls++;return Response.json({error:'secret provider detail'},{status:429});};
+    await assert.rejects(generateScene([]), /billing and access/);
+    assert.equal(calls,1);
+    globalThis.fetch=async()=>Response.json({stop_reason:'max_tokens',content:[]});
+    await assert.rejects(generateScene([]), /did not finish/);
+  } finally {globalThis.fetch=oldFetch;if(oldKey===undefined)delete process.env.ANTHROPIC_API_KEY;else process.env.ANTHROPIC_API_KEY=oldKey;}
+});
+
+test("AI dialogue gets enough time to speak without clipping", () => {
+  const scene={title:'Reply',script:'Ah RainCheck a good trench coat dark jeans and simple boots look great.',direction:'Look at camera.',duration:5};
+  assert.equal(scriptToClip(scene,'reply').duration,10);
+  assert.throws(()=>scriptToClip({...scene,script:Array(35).fill('a').join(' ')},'reply'),/too long/);
 });

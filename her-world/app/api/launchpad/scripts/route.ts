@@ -3,6 +3,7 @@ import { wallet, mutationGuard, setting, json } from "@/lib/server";
 import { ownedDraft, takeQuota } from "@/lib/launchpad-store";
 import { fundedCreator } from "@/lib/launchpad-media";
 import { draftSchema } from "@/lib/launchpad";
+import { generateScene, scriptProviderReady } from "@/lib/script-provider";
 import {
   scriptRequestSchema,
   scriptMessages,
@@ -20,7 +21,7 @@ export async function POST(req: Request) {
       if (
         setting("HER_LAUNCHPAD_ENABLED") !== "true" ||
         setting("ACP_SCRIPTS_ENABLED") !== "true" ||
-        !setting("OPENAI_API_KEY")
+        !scriptProviderReady()
       )
         return json(
           {
@@ -48,36 +49,9 @@ export async function POST(req: Request) {
       );
       if (body.mode !== "script" && !messages.length)
         throw new Error("There are no fresh chat messages to respond to.");
-      const response = await fetch(
-        "https://api.openai.com/v1/chat/completions",
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${setting("OPENAI_API_KEY")}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            model: setting("ACP_SCRIPT_MODEL") || "gpt-4.1-mini",
-            max_completion_tokens: 500,
-            response_format: { type: "json_object" },
-            messages: scriptMessages(draft, body.mode, body.brief, messages),
-          }),
-          signal: AbortSignal.timeout(45000),
-          redirect: "error",
-        },
-      );
-      if (!response.ok)
-        throw new Error(
-          "The script provider is unavailable. Check its billing and access.",
-        );
-      const result = (await response.json()) as {
-        choices?: { message?: { content?: string } }[];
-      };
-      const content = result.choices?.[0]?.message?.content;
-      if (!content || content.length > 5000)
-        throw new Error("The script provider did not return a usable scene.");
+      const result = await generateScene(scriptMessages(draft, body.mode, body.brief, messages));
       return json({
-        clip: scriptToClip(JSON.parse(content), body.mode),
+        clip: scriptToClip(result, body.mode),
         generated: true,
       });
     });
