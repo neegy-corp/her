@@ -33,6 +33,7 @@
   "SELECT * FROM her_private.launchpad_renders WHERE character_id=? AND wallet=? ORDER BY created_at DESC LIMIT 30",
   "SELECT * FROM her_private.operator_orders WHERE id = ? AND wallet = ?",
   "SELECT DISTINCT character FROM her_private.burn_receipts WHERE wallet = ? AND kind = 'character'",
+  "SELECT c.id,c.document::jsonb->>'name' AS name,c.document::jsonb->>'symbol' AS symbol,c.document::jsonb->>'description' AS description,c.mint,c.document::jsonb->>'coinPfp' AS pfp,c.document::jsonb->>'coinBanner' AS banner FROM her_private.launchpad_characters c JOIN her_private.launchpad_coins t ON t.id=c.id AND t.wallet=c.wallet AND t.mint=c.mint AND t.signature=c.signature WHERE t.status='confirmed' ORDER BY c.updated_at DESC,c.id LIMIT 25 OFFSET ?",
   "SELECT enabled,desired,actual,revision,heartbeat,healthy FROM her_private.character_control WHERE id=1",
   "SELECT her_private.accept_character_burn(?,?) AS counted",
   "SELECT her_private.advance_character_rounds()",

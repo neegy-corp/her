@@ -19,6 +19,7 @@ import {
   Wallet,
   CircleHelp,
   Layers3,
+  Plus,
 } from "lucide-react";
 import { WalletRoot, useWallet } from "./wallet";
 import { shortWallet } from "@/lib/catalog";
@@ -35,6 +36,7 @@ import {
   type LaunchStatus,
 } from "@/lib/launchpad";
 import "./launchpad.css";
+import "./acp-pages.css";
 import ShowEditor from "./show-editor";
 import CoinArtwork from "./coin-artwork";
 import { ACP_FEE_WALLET, ACP_QUOTE_MINT } from "@/lib/acp-config";
@@ -98,8 +100,7 @@ function Home() {
       expires: number;
     } | null>(null),
     [confirm, setConfirm] = useState(false),
-    [showHelp, setShowHelp] = useState(false),
-    [filter, setFilter] = useState("all");
+    [showHelp, setShowHelp] = useState(false);
   const [activeVoice, setActiveVoice] = useState("");
   const audio = useRef<HTMLAudioElement | null>(null),
     studio = useRef<HTMLElement | null>(null),
@@ -159,7 +160,7 @@ function Home() {
     setError("");
     setReview(null);
   }
-  function begin(preset = "marcel") {
+  function begin(preset = "blank") {
     if (draft)
       setSaved((p) =>
         [draft, ...p.filter((x) => x.id !== draft.id)].slice(0, 12),
@@ -343,15 +344,15 @@ function Home() {
   const visualCurrent =
     !!draft?.image && draft.imageFingerprint === visualFingerprint(draft);
   return (
-    <main className="lp">
+    <main className="lp acp-pages">
       <header className="lp-header">
         <a className="lp-logo" href="/" aria-label="ACP launchpad">
           acp<span>®</span>
           <small>ARTIFICIAL CHARACTER PROTOCOL</small>
         </a>
         <nav aria-label="Main navigation">
-          <a href="#studio">Create</a>
-          <a href="#characters">Discover</a>
+          <a href="/create">Create</a>
+          <a href="/tokens">Tokens</a>
           <a href="/collective">
             HER collective <ArrowUpRight size={13} />
           </a>
@@ -364,74 +365,22 @@ function Home() {
           {viewer.wallet ? shortWallet(viewer.wallet) : "Connect wallet"}
         </button>
       </header>
-      <section className="lp-hero">
-        <div className="lp-hero-copy">
-          <div className="lp-kicker">
-            <span /> A LITTLE HUMAN. ENTIRELY YOURS.
-          </div>
-          <h1>
-            The internet needs
-            <br />
-            <em>more characters.</em>
-          </h1>
-          <p>
-            Upload a face. Write the show.
-            <br />
-            Give chat a say in what happens next.
-          </p>
-          <div className="lp-hero-actions">
-            <a className="lp-primary" href="#studio">
-              Create a character <ArrowUpRight size={19} />
-            </a>
-            <a className="lp-text-link" href="#how">
-              How it works <ArrowRight size={15} />
-            </a>
-          </div>
-          <div className="lp-hero-bottom">
-            <span>01 / THE CHARACTER</span>
-            <span>02 / THE SHOW</span>
-            <span>03 / THE LAUNCH</span>
-          </div>
-        </div>
-        <div className="lp-hero-art">
-          <img
-            src="/images/launchpad-marcel.png"
-            alt="Marcel, an original fictional AI radio host"
-          />
-          <span className="lp-art-label">
-            <span /> CHARACTER CONCEPT
-          </span>
-          <div className="lp-art-caption">
-            <div>
-              <small>MEET YOUR NEXT ALTER EGO</small>
-              <strong>
-                Someone only
-                <br />
-                <i>you could imagine.</i>
-              </strong>
-            </div>
-            <span className="lp-art-arrow">↗</span>
-          </div>
-        </div>
-      </section>
-      <div className="lp-ticker">
-        <span>ONE FACE. A WHOLE PERSONALITY.</span>
-        <span>✳</span>
-        <span>PROMPT YOUR WORLD</span>
-        <span>✳</span>
-        <span>BUILT FOR CONVERSATION</span>
-        <span>✳</span>
-        <span>YOUR CHARACTER. YOUR COIN.</span>
-      </div>
       <section className="lp-studio" id="studio" ref={studio}>
         <div className="lp-section-top">
           <div>
             <span className="lp-kicker">THE CHARACTER STUDIO / 001</span>
-            <h2>
-              Make someone <em>memorable.</em>
-            </h2>
+            <h1 className="acp-studio-title">
+              Create your <em>character.</em>
+            </h1>
+            <p className="acp-studio-intro">
+              Start with reference images. Direct the action, write the script,
+              then build the show.
+            </p>
           </div>
           <div className="lp-save-status">
+            <button className="lp-text-link" onClick={() => begin()}>
+              New character <Plus size={14} />
+            </button>
             <span className={localSaved ? "saved" : ""} />
             {localSaved
               ? "Draft saved on this device"
@@ -544,6 +493,12 @@ function Home() {
                         character now.
                       </p>
                     )}
+                    <button
+                      className="lp-secondary"
+                      onClick={() => setStep("show")}
+                    >
+                      Upload character reference photos <ArrowRight size={16} />
+                    </button>
                     <button
                       className="lp-next"
                       onClick={() => setStep("personality")}
@@ -874,8 +829,8 @@ function Home() {
                 src={draft?.image || samplePortrait(draft)}
                 alt={
                   draft?.image
-                    ? `Generated portrait of ${draft.name}`
-                    : `Example portrait for ${draft?.name || "your character"}; upload or generate your own reference`
+                    ? `Character reference for ${draft.name}`
+                    : "Upload or generate your character reference"
                 }
               />
               {busy === "Generating portrait" && (
@@ -888,8 +843,8 @@ function Home() {
               <div className="lp-preview-caption">
                 <small>
                   {draft?.image
-                    ? "YOUR GENERATED CHARACTER"
-                    : "EXAMPLE ARTWORK"}
+                    ? "YOUR CHARACTER REFERENCE"
+                    : "ADD YOUR REFERENCE"}
                 </small>
                 <h3>
                   {draft?.name || "Your character"}
@@ -949,35 +904,17 @@ function Home() {
       <section className="lp-discover" id="characters">
         <div className="lp-section-top">
           <div>
-            <span className="lp-kicker">THE CAST IS JUST GETTING STARTED</span>
+            <span className="lp-kicker">YOUR WORKSPACE</span>
             <h2>
-              Different faces.
+              Your characters.
               <br />
-              <em>Same main-character energy.</em>
+              <em>Pick up where you left off.</em>
             </h2>
           </div>
           <div className="lp-discover-actions">
-            <div className="lp-filters">
-              <button
-                aria-pressed={filter === "all"}
-                onClick={() => setFilter("all")}
-              >
-                Starter characters
-              </button>
-              <button
-                aria-pressed={filter === "drafts"}
-                onClick={() => {
-                  if (draft)
-                    setSaved((p) => [
-                      draft,
-                      ...p.filter((x) => x.id !== draft.id),
-                    ]);
-                  setFilter("drafts");
-                }}
-              >
-                My drafts
-              </button>
-            </div>
+            <button className="lp-primary" onClick={() => begin()}>
+              New character <Plus size={16} />
+            </button>
             <button
               className="lp-text-link"
               onClick={() => void restoreCloud()}
@@ -988,48 +925,7 @@ function Home() {
           </div>
         </div>
         <div className="lp-character-grid">
-          {filter === "all" ? (
-            <>
-              <CharacterCard
-                name="Jean-Paul"
-                tag="THE ESPRESSO PHILOSOPHER"
-                image="/images/acp-jean-paul.png"
-                description="One espresso. Several opinions. An original fictional character."
-                action={() => begin("jean-paul")}
-              />
-              <CharacterCard
-                name="Marcel"
-                tag="THE AFTER-HOURS HOST"
-                image="/images/launchpad-marcel.png"
-                description="Dry wit. Warm voice. A story for every caller."
-                action={() => begin("marcel")}
-              />
-              <CharacterCard
-                name="Olivia"
-                tag="THE ORIGINAL HER"
-                image="/images/olivia.jpg"
-                description="Curious by nature. Unfiltered by design."
-                action={() => begin("olivia")}
-              />
-              <button
-                className="lp-new-character"
-                onClick={() => begin("blank")}
-              >
-                <span className="lp-new-symbol">✳</span>
-                <div>
-                  <small>THE NEXT ONE IS YOURS</small>
-                  <h3>
-                    Not quite
-                    <br />
-                    <em>like anyone.</em>
-                  </h3>
-                  <span>
-                    Start with your idea <ArrowUpRight size={21} />
-                  </span>
-                </div>
-              </button>
-            </>
-          ) : saved.length ? (
+          {saved.length ? (
             saved.map((d) => (
               <CharacterCard
                 key={d.id}
@@ -1052,54 +948,9 @@ function Home() {
           )}
         </div>
         <p className="lp-examples-note">
-          Starter concepts, not active coins or live broadcasts. Make them your
-          own before launching.
+          Private drafts stay here. Confirmed coin launches appear in the token
+          directory.
         </p>
-      </section>
-      <section className="lp-how" id="how">
-        <div>
-          <span className="lp-kicker">THE PATH TO PUMP.FUN</span>
-          <h2>
-            A character.
-            <br />A world.
-            <br />
-            <em>A place to go live.</em>
-          </h2>
-          <p>
-            One studio for the creative work.
-            <br />
-            Clear steps for everything that comes next.
-          </p>
-        </div>
-        <div className="lp-how-steps">
-          {[
-            {
-              title: "Make the character",
-              text: "Describe the face, write the personality and choose a voice. Generate a portrait you actually want to bring to life.",
-            },
-            {
-              title: "Set the scene",
-              text: "A corner café, an after-hours studio, a place that only exists in your head. Describe the background in your own words.",
-            },
-            {
-              title: "Review the coin",
-              text: "Choose the name and ticker, then review and sign the pump.fun creation transaction with your own wallet.",
-            },
-            {
-              title: "Bring it to the chat",
-              text: "Train the live face and connect broadcast access. Live publishing opens when the dedicated streaming service is ready.",
-            },
-          ].map((s, i) => (
-            <div key={s.title}>
-              <span>0{i + 1}</span>
-              <div>
-                <h3>{s.title}</h3>
-                <p>{s.text}</p>
-              </div>
-              <ArrowUpRight size={20} />
-            </div>
-          ))}
-        </div>
       </section>
       <footer className="lp-footer">
         <a className="lp-logo" href="/">

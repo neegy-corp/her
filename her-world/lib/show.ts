@@ -56,19 +56,19 @@ export function defaultShow(): ShowPlan {
         id: crypto.randomUUID(),
         title: "The opening",
         script:
-          "Welcome to the after-hours show. Pull up a chair. What has the internet done this time?",
+          "I have a very important announcement. I forgot the announcement. Chat, what happens next?",
         direction:
-          "Look into the camera, lean back and smile. Calm, conversational delivery.",
+          "A candid vertical selfie. The character walks toward the camera, pauses with an expressive reaction, then looks directly into the lens. Natural handheld camera movement.",
         duration: 10,
         chatPause: 30,
-        mode: "speech",
+        mode: "performance",
       },
       {
         id: crypto.randomUUID(),
         title: "A little out of character",
         script: "A very serious person, doing a deeply unserious thing.",
         direction:
-          "The character stands up and does a small, playful dance beside the desk. Keep their face and outfit consistent.",
+          "A wider shot of the same character doing a small, playful dance. Move the camera closer for their reaction. Keep facial identity and outfit consistent.",
         duration: 10,
         chatPause: 30,
         mode: "performance",

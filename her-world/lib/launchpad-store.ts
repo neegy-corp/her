@@ -1,4 +1,16 @@
 import { db } from "./database";
+import type { PublicTokenRow } from "./public-tokens";
+
+export async function publicTokenRows(offset: number) {
+  return (
+    await db()
+      .prepare(
+        "SELECT c.id,c.document::jsonb->>'name' AS name,c.document::jsonb->>'symbol' AS symbol,c.document::jsonb->>'description' AS description,c.mint,c.document::jsonb->>'coinPfp' AS pfp,c.document::jsonb->>'coinBanner' AS banner FROM her_private.launchpad_characters c JOIN her_private.launchpad_coins t ON t.id=c.id AND t.wallet=c.wallet AND t.mint=c.mint AND t.signature=c.signature WHERE t.status='confirmed' ORDER BY c.updated_at DESC,c.id LIMIT 25 OFFSET ?",
+      )
+      .bind(offset)
+      .all<PublicTokenRow>()
+  ).results;
+}
 import type { CharacterDraft } from "./launchpad";
 
 export type DraftRow = {

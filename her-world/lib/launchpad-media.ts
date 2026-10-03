@@ -65,7 +65,7 @@ export function performanceInput(clip: ShowClip, images: string[]) {
     );
   return {
     start_image_url: images[0],
-    prompt: `${images.length > 1 ? "@Element1 is the only character in this scene." : "One fictional adult character."} Preserve their identity, wardrobe and setting from the reference. Creative direction: ${JSON.stringify(clip.direction)}. ${clip.script ? `Dialogue: ${JSON.stringify(clip.script)}.` : ""} No captions, subtitles or logos.`,
+    prompt: `${images.length > 1 ? "@Element1 is the only character in this scene." : "One fictional adult character."} Preserve the character’s facial identity and distinctive features across camera angles and movement. Keep wardrobe and setting unless the creative direction explicitly changes them. Natural skin texture, coherent anatomy, expressive movement. Creative direction: ${JSON.stringify(clip.direction)}. ${clip.script ? `Dialogue: ${JSON.stringify(clip.script)}.` : ""} No captions, subtitles or logos.`,
     duration: String(clip.duration) as "5",
     generate_audio: true,
     ...(images.length > 1

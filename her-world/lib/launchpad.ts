@@ -116,24 +116,17 @@ export const offlineStatus: LaunchStatus = {
   broadcast: false,
   message: "Checking launch services…",
 };
-export function newDraft(preset = "jean-paul"): CharacterDraft {
-  const female = preset === "olivia";
-  const draft: CharacterDraft = {
+export function newDraft(_preset = "blank"): CharacterDraft {
+  return {
     id: crypto.randomUUID(),
-    name: female ? "Olivia" : "Marcel",
-    symbol: female ? "OLIVIA" : "MARCEL",
-    description: female
-      ? "A curious AI host with a sharp sense of humor and a room of her own."
-      : "An opinionated late-night radio host. Exceptionally curious. Mildly overdressed.",
-    appearance: female
-      ? "An original adult woman with natural dark hair, warm expressive eyes and a relaxed cream sweater. Candid, unretouched photography, real skin texture."
-      : "An original man in his late forties with swept-back dark curls, a thin mustache, amber spectacles and a burgundy velvet blazer over a cream knit polo. Natural skin texture, expressive eyebrows.",
-    personality: female
-      ? "Curious, candid and quick-witted. Ask chat thoughtful questions. Keep replies short and respond to one person at a time. Treat people warmly, even when you disagree."
-      : "A dry-witted late-night radio host who treats every chat message like a call into his show. Loves strange stories, coffee and unnecessary tailoring. Warm underneath the sarcasm. Short replies, one listener at a time.",
-    background: female ? scenes[1].prompt : scenes[0].prompt,
-    voice: female ? "julia" : "benjamin",
-    scene: female ? "loft" : "radio",
+    name: "",
+    symbol: "",
+    description: "",
+    appearance: "",
+    personality: "",
+    background: "",
+    voice: "benjamin",
+    scene: "custom",
     image: "",
     imageFingerprint: "",
     coinPfp: "",
@@ -142,53 +135,9 @@ export function newDraft(preset = "jean-paul"): CharacterDraft {
     updatedAt: Date.now(),
     show: defaultShow(),
   };
-  if (preset === "jean-paul")
-    Object.assign(draft, {
-      name: "Jean-Paul",
-      symbol: "JEANPAUL",
-      scene: "cafe",
-      background: scenes[2].prompt,
-      description:
-        "Your neighborhood philosopher. One espresso, several opinions, absolutely no hurry.",
-      appearance:
-        "An original fictional French-Caribbean man in his late forties, warm dark brown skin, salt-and-pepper curls, a subtle pencil mustache, expressive eyes. Ivory linen shirt and tobacco-brown jacket. Natural pores and age lines, documentary photography.",
-      personality:
-        "An original fictional cafe regular with warm, dry humor. Finds everyday internet drama delightfully absurd. Speaks in short conversational English. Affectionately teases situations, never bullies viewers. Calls each listener by name and remembers the conversation. Never claims to be a real person or an existing influencer.",
-      voice: "benjamin",
-      show: {
-        ...defaultShow(),
-        clips: [
-          {
-            id: crypto.randomUUID(),
-            title: "The espresso committee",
-            script:
-              "Bonjour, chat. I ordered one espresso and received three unsolicited opinions. Finally, a cafe that understands the internet.",
-            direction:
-              "Seated at the cafe table, look into the lens, lift the small espresso cup and smile naturally. Preserve the face and jacket.",
-            duration: 15,
-            chatPause: 30,
-            mode: "performance",
-          },
-          {
-            id: crypto.randomUUID(),
-            title: "A very serious review",
-            script:
-              "This croissant has more structure than my entire morning. Chat, what should we investigate next?",
-            direction:
-              "Inspect a croissant with theatrical seriousness, raise one eyebrow and then look warmly at the camera. Stay seated.",
-            duration: 10,
-            chatPause: 30,
-            mode: "performance",
-          },
-        ],
-      },
-    });
-  return draft;
 }
-export const samplePortrait = (draft: CharacterDraft | null) =>
-  draft?.name === "Jean-Paul"
-    ? "/images/acp-jean-paul.png"
-    : "/images/launchpad-marcel.png";
+export const samplePortrait = (_draft: CharacterDraft | null) =>
+  "/images/character-placeholder.svg";
 // The fingerprint ties an approved image to the prompts that actually produced it.
 export function visualFingerprint(
   draft: Pick<CharacterDraft, "appearance" | "background">,

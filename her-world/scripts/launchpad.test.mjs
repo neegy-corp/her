@@ -38,9 +38,8 @@ registerHooks({
 });
 const { newDraft, draftSchema, localDraftSchema, visualFingerprint } =
   await import("../lib/launchpad.ts");
-const { imageType, performanceInput, safeVideoUrl } = await import(
-  "../lib/launchpad-media.ts"
-);
+const { imageType, performanceInput, safeVideoUrl } =
+  await import("../lib/launchpad-media.ts");
 const route = await import("../app/api/launchpad/route.ts");
 const videos = await import("../app/api/launchpad/videos/route.ts");
 const assets = await import("../app/api/launchpad/assets/route.ts");
@@ -50,12 +49,10 @@ const { ShowRunner } = await import("../lib/show-runner.ts");
 const { validateWhipEndpoint } = await import("../lib/whip-publisher.ts");
 const { normalizeChat } = await import("../lib/pump-chat.ts");
 const { scriptToClip, scriptMessages } = await import("../lib/acp-script.ts");
-const { assertPairSupport, buildAcpCreate } = await import(
-  "../lib/acp-coin.ts"
-);
-const { ACP_QUOTE_MINT, ACP_FEE_WALLET, assetPurpose } = await import(
-  "../lib/acp-config.ts"
-);
+const { assertPairSupport, buildAcpCreate } =
+  await import("../lib/acp-coin.ts");
+const { ACP_QUOTE_MINT, ACP_FEE_WALLET, assetPurpose } =
+  await import("../lib/acp-config.ts");
 const { Keypair, PublicKey, Transaction } = await import("@solana/web3.js");
 const { TOKEN_2022_PROGRAM_ID } = await import("@solana/spl-token");
 test("Pump SDK loads without Node's experimental CommonJS-to-ESM bridge", () => {
@@ -437,4 +434,105 @@ test("stopping during a pending render cannot resurrect or play a show", async (
   await tick;
   assert.equal(r.state.phase, "stopped");
   assert.equal(played, 0);
+});
+
+const { publicToken } = await import("../lib/public-tokens.ts");
+const tokenRoute = await import("../app/api/launchpad/tokens/route.ts");
+test("new creator starts without an invented influencer identity", () => {
+  const draft = newDraft();
+  assert.equal(draft.name, "");
+  assert.equal(draft.image, "");
+  assert.equal(draft.appearance, "");
+  assert.equal(draft.show.clips[0].mode, "performance");
+});
+test("public token projection drops private fields and rejects unsafe links", () => {
+  const mint = Keypair.generate().publicKey.toBase58();
+  const item = publicToken({
+    id: "test",
+    mint,
+    name: "Example",
+    symbol: "EXAMPLE",
+    description: "Public description",
+    pfp: "javascript:alert(1)",
+    banner: "https://user:password@example.com/private",
+    wallet: "PRIVATE",
+    document: "PRIVATE",
+    personality: "PRIVATE",
+    transaction: "PRIVATE",
+  });
+  assert.equal(item.pfp, null);
+  assert.equal(item.banner, null);
+  assert.equal(item.pumpUrl, `https://pump.fun/coin/${mint}`);
+  assert.equal(JSON.stringify(item).includes("PRIVATE"), false);
+  assert.equal(publicToken({ ...item, mint: "https://evil.example" }), null);
+});
+test("directory validates pagination and fails closed without exposing database errors", async () => {
+  const previous = process.env.DATABASE_URL;
+  const oldFetch = globalThis.fetch;
+  try {
+    process.env.DATABASE_URL = "postgresql://her_web:test@example.com/postgres";
+    assert.equal(
+      (
+        await tokenRoute.GET(
+          new Request("http://localhost/api/launchpad/tokens?offset=-1"),
+        )
+      ).status,
+      400,
+    );
+    globalThis.fetch = async () => {
+      throw new Error("SECRET DATABASE ERROR");
+    };
+    const response = await tokenRoute.GET(
+      new Request("http://localhost/api/launchpad/tokens"),
+    );
+    assert.equal(response.status, 503);
+    assert.equal((await response.text()).includes("SECRET"), false);
+  } finally {
+    globalThis.fetch = oldFetch;
+    if (previous === undefined) delete process.env.DATABASE_URL;
+    else process.env.DATABASE_URL = previous;
+  }
+});
+test("directory queries confirmed matching records with bounded pagination and public projection", async () => {
+  const previous = process.env.DATABASE_URL,
+    oldFetch = globalThis.fetch;
+  try {
+    process.env.DATABASE_URL = "postgresql://her_web:test@example.com/postgres";
+    const rows = Array.from({ length: 25 }, (_, i) => ({
+      id: String(i),
+      mint: Keypair.generate().publicKey.toBase58(),
+      name: "Test",
+      symbol: "TEST",
+      description: "Test description",
+      pfp: null,
+      banner: null,
+      privateKey: "MUST NOT LEAK",
+    }));
+    globalThis.fetch = async (_url, init) => {
+      const {
+        statements: [q],
+      } = JSON.parse(init.body);
+      assert.match(q.query, /t.status='confirmed'/);
+      assert.match(q.query, /t.signature=c.signature/);
+      assert.match(q.query, /t.mint=c.mint/);
+      assert.match(q.query, /LIMIT 25 OFFSET \?/);
+      assert.deepEqual(q.values, [24]);
+      assert.equal(q.query.includes("SELECT *"), false);
+      return Response.json({
+        results: [{ results: rows, meta: { changes: 0 } }],
+      });
+    };
+    const response = await tokenRoute.GET(
+      new Request("http://localhost/api/launchpad/tokens?offset=24"),
+    );
+    assert.equal(response.status, 200);
+    const data = await response.json();
+    assert.equal(data.tokens.length, 24);
+    assert.equal(data.nextOffset, 48);
+    assert.equal(JSON.stringify(data).includes("MUST NOT LEAK"), false);
+  } finally {
+    globalThis.fetch = oldFetch;
+    if (previous === undefined) delete process.env.DATABASE_URL;
+    else process.env.DATABASE_URL = previous;
+  }
 });
