@@ -1,0 +1,80 @@
+// Explicit integration check. Writes only a fresh unfunded fixture; prints no credentials.
+import assert from "node:assert/strict";
+import { registerHooks } from "node:module";
+import { existsSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import nextEnv from "@next/env";
+import { Keypair } from "@solana/web3.js";
+nextEnv.loadEnvConfig(process.cwd(), false, { info() {}, error() {} });
+const root = new URL("../", import.meta.url);
+registerHooks({
+  resolve(specifier, context, next) {
+    if (specifier.startsWith("@/"))
+      specifier = new URL(specifier.slice(2), root).href;
+    if (
+      (specifier.startsWith(".") || specifier.startsWith("file:")) &&
+      context.parentURL?.startsWith(root.href)
+    ) {
+      const u = new URL(specifier, context.parentURL);
+      if (
+        !u.pathname.endsWith(".ts") &&
+        existsSync(fileURLToPath(`${u.href}.ts`))
+      )
+        specifier = `${u.href}.ts`;
+    }
+    return next(specifier, context);
+  },
+});
+const { withDatabase } = await import("../lib/database.ts"),
+  store = await import("../lib/launchpad-store.ts"),
+  { newDraft } = await import("../lib/launchpad.ts");
+const draft = newDraft(),
+  owner = Keypair.generate().publicKey.toBase58(),
+  other = Keypair.generate().publicKey.toBase58();
+await withDatabase(process.env.DATABASE_URL, async () => {
+  await store.saveDraft(draft, owner);
+  assert.equal((await store.ownedDraft(draft.id, owner)).wallet, owner);
+  assert.equal(await store.ownedDraft(draft.id, other), null);
+  await assert.rejects(() =>
+    store.saveDraft({ ...draft, name: "Cross-owner overwrite" }, other),
+  );
+  const edited = {
+    ...draft,
+    description: "Integration fixture: remove after verification.",
+  };
+  await store.saveDraft(edited, owner);
+  assert.equal(
+    JSON.parse((await store.ownedDraft(draft.id, owner)).document).description,
+    edited.description,
+  );
+  const job = {
+    id: crypto.randomUUID(),
+    character_id: draft.id,
+    wallet: owner,
+    clip_id: draft.show.clips[0].id,
+    fingerprint: "test-fixture",
+    provider: "fal",
+    provider_id: null,
+    status: "submitting",
+    video_url: null,
+    created_at: Date.now(),
+  };
+  assert.ok(await store.claimRender(job));
+  assert.equal(
+    await store.claimRender({ ...job, id: crypto.randomUUID() }),
+    null,
+  );
+  assert.equal((await store.renders(draft.id, other)).length, 0);
+  console.log(
+    JSON.stringify({
+      verified: true,
+      fixture: draft.id,
+      checks: [
+        "durable draft read/write",
+        "cross-owner read/write denied",
+        "atomic duplicate render claim",
+        "cross-owner renders denied",
+      ],
+    }),
+  );
+});

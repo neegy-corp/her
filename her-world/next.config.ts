@@ -1,6 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  serverExternalPackages: ['@pump-fun/pump-sdk'],
   async headers() {
     return [{ source: '/operator/:path*', headers: [
       { key: 'Cache-Control', value: 'private, no-store' },

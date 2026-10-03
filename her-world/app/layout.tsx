@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "HER — A new face for the trenches",
-  description: "Meet HER's first three AI characters. Explore Pro faces and the upcoming token-burn stage on pump.fun.",
+  title: "HER — The character launchpad",
+  description: "Create an original AI character. Design its appearance, personality, voice and world, then prepare its pump.fun launch with HER.",
   icons: {
     icon: "/olivia-icon.png",
     shortcut: "/olivia-icon.png",
