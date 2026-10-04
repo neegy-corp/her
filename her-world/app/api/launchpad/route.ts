@@ -334,7 +334,7 @@ async function post(req: Request) {
         description: `${draft.description}\nFictional AI character created on ACP — Artificial Character Protocol.`,
         image: draft.coinPfp,
         ...(draft.coinBanner ? { banner: draft.coinBanner } : {}),
-        external_url: "https://heronsol.live",
+        external_url: "https://acprotocol.live",
       }),
       {
         access: "public",
