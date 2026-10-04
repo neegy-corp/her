@@ -1,12 +1,13 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Video, ArrowLeft, ArrowUpRight } from "lucide-react";
+import { toast } from "sonner";
+import { Toaster } from "@/components/ui/sonner";
 import { ShowRunner, type RenderedClip } from "@/lib/show-runner";
 import { ContinuousShowRunner } from "@/lib/continuous-show";
 import { measureMediaBuffer } from "@/lib/media-buffer";
 import { preparedSeconds } from "@/lib/show";
 import { WhipPublisher } from "@/lib/whip-publisher";
-import { openPumpChat } from "@/lib/pump-chat";
 import type { ChatMessage, ShowClip, ShowPlan } from "@/lib/show";
 import "./launchpad.css";
 import StreamCredits from "./stream-credits";
@@ -37,6 +38,25 @@ async function api<T>(
   const result = (await r.json()) as T & { error?: string };
   if (!r.ok) throw new Error(result.error || "Studio request failed.");
   return result;
+}
+const GUIDE_TOAST = "go-live-guide";
+// Shown automatically once the show is ready, and again from "How to go live".
+function showGoLiveGuide() {
+  toast.info("How to go live on pump.fun", {
+    id: GUIDE_TOAST,
+    duration: Infinity,
+    closeButton: true,
+    description: (
+      <ol style={{ margin: "6px 0 0", paddingLeft: 18, lineHeight: 1.5 }}>
+        <li>Open your coin on pump.fun and go to its streaming settings.</li>
+        <li>Copy the <b>Stream URL</b> (WHIP) and the <b>Stream key</b> into the two fields here.</li>
+        <li>Press <b>Go Live</b>. Audio comes from the video itself, so no microphone or screen share is needed.</li>
+        <li>For sound: leave this tab unmuted, keep the volume up, and click Go Live yourself so the browser allows audio.</li>
+        <li>Keep this tab open and in front. Closing it, sleeping the device or switching tabs can interrupt the stream.</li>
+        <li>Open your coin on pump.fun in another window to confirm picture and sound. Mute that window to avoid echo.</li>
+      </ol>
+    ),
+  });
 }
 function delay(signal: AbortSignal) {
   return new Promise<void>((resolve, reject) => {
@@ -101,8 +121,7 @@ function Studio({ id }: { id: string }) {
     [error, setError] = useState("");
   const [active, setActive] = useState(false),
     [starting, setStarting] = useState(false),
-    [phase, setPhase] = useState("stopped"),
-    [chat, setChat] = useState("not connected");
+    [phase, setPhase] = useState("stopped");
   const [endpoint, setEndpoint] = useState(""),
     [key, setKey] = useState(""),
     [publishing, setPublishing] = useState(false),
@@ -143,6 +162,16 @@ function Studio({ id }: { id: string }) {
       void publisher.current.stop();
     };
   }, [id, viewer.wallet, revision]);
+  const guideShown = useRef(false);
+  useEffect(() => {
+    if (manifest?.ready && manifest.mint && !guideShown.current) {
+      guideShown.current = true;
+      showGoLiveGuide();
+    }
+    return () => {
+      toast.dismiss(GUIDE_TOAST);
+    };
+  }, [manifest?.ready, manifest?.mint]);
   useEffect(() => {
     const warn = (event: BeforeUnloadEvent) => {
       if (active || starting) {
@@ -192,7 +221,14 @@ function Studio({ id }: { id: string }) {
     setStarting(true);
     setError("");
     try {
-      if (goLive) broadcastPreflight(manifest, endpoint, key);
+      if (goLive) {
+        broadcastPreflight(manifest, endpoint, key);
+        toast.dismiss(GUIDE_TOAST);
+        toast.message("Going live. Keep this tab open, in front and unmuted.", {
+          description: "After it connects, open your coin on pump.fun to confirm picture and sound.",
+          duration: 12000,
+        });
+      }
       if (goLive && manifest.show.continuous) {
         setHealth("Checking the actual duration of the prepared video buffer…");
         const seconds = await measureMediaBuffer(manifest.clips, controller.signal);
@@ -407,22 +443,13 @@ function Studio({ id }: { id: string }) {
           const current = new Runner(manifest.mint || id, playbackPlan, {
             play,
             reply: (message, signal) =>
-              renderResponse("reply", [message], signal),
+              renderResponse("script", [], signal),
             generate: (messages, signal, context) =>
-              renderResponse(messages.length ? "recommendation" : "script", messages, signal, context),
+              renderResponse("script", [], signal, context),
           });
           current.start(manifest.clips);
           disposeSteps.push(() => current.stop());
           runner.current = current;
-          const stopChat = manifest.mint
-            ? openPumpChat(
-                manifest.mint,
-                (m) => current.receive(manifest.mint!, m),
-                setChat,
-              )
-            : () => undefined;
-          disposeSteps.push(stopChat);
-          if (!manifest.mint) setChat("No deployed coin; rehearsal only");
           const advance = () => {
             if (creditSession.current && creditDeadline.current <= Date.now()) {
               // A burn in another tab may have extended this session since the last poll.
@@ -578,6 +605,7 @@ function Studio({ id }: { id: string }) {
     !connected;
   return (
     <main className="lp acp-pages">
+      <Toaster position="top-center" theme="light" />
       <AcpNav />
       <div className="acp-live-shell">
         <StreamCredits id={id} onState={updateCredits} />
@@ -588,7 +616,7 @@ function Studio({ id }: { id: string }) {
               {manifest?.name || "Character"}
               <em> on air.</em>
             </h1>
-            <p>Play the show. Hear from chat. Let the next scene unfold.</p>
+            <p>Play your scripts. Generate the next scene from your character’s creative direction.</p>
           </div>
           <a href={`/create/${id}/show`} className="lp-text-link">
             <ArrowLeft size={14} aria-hidden="true" /> Back to creation
@@ -625,7 +653,6 @@ function Studio({ id }: { id: string }) {
             </div>
             <div className="acp-program-status" role="status">
               <span>Show: {phase}</span>
-              <span>Chat: {chat}</span>
             </div>
             <p className="acp-stream-health">{health}</p>
             {manifest?.show.continuous && <p className="lp-field-note">Continuous mode · no shutdown timer. New renders use the saved generation limit. If generation falls behind, prepared clips replay with a visible label.</p>}
@@ -716,10 +743,12 @@ function Studio({ id }: { id: string }) {
                 disabled={connected || starting || publishing}
               />
             </label>
+            <button type="button" className="lp-text-link" onClick={showGoLiveGuide}>
+              How to go live ↗
+            </button>
             <p className="acp-live-help">
               Copy the stream credentials from this coin’s pump.fun streaming
-              settings. The supplied key controls the destination; ACP connects
-              chat to the token shown above. Keys stay in this tab’s memory.
+              settings. The supplied key controls the destination. Keys stay in this tab’s memory.
             </p>
             {error && (
               <p role="alert" className="acp-live-error">
@@ -762,8 +791,8 @@ function Studio({ id }: { id: string }) {
               </p>
             </div>
             <p className="acp-live-help">
-              Go Live starts the prepared videos and reads this token’s chat
-              during pauses. New scenes and spoken replies require connected
+              Go Live starts the prepared videos for this token.
+              Generating new scenes requires connected
               generation services. After connecting, open the coin to verify
               public playback.
             </p>

@@ -1,9 +1,9 @@
 import { withDatabase } from "@/lib/database";
 import { json, mutationGuard, setting, wallet } from "@/lib/server";
-import { ownedDraft, renders, claimRender, updateRender, saveImage, takeQuota } from "@/lib/launchpad-store";
-import { localDraftSchema, visualFingerprint } from "@/lib/launchpad";
+import { ownedDraft, assets, renders, claimRender, updateRender, saveImage, takeQuota } from "@/lib/launchpad-store";
+import { localDraftSchema, visualFingerprint, referenceFingerprint } from "@/lib/launchpad";
 import { fundedCreator, digest } from "@/lib/launchpad-media";
-import { HF_PORTRAIT, PORTRAIT_CLIP, higgsfield, hfPortraitInput, persistHfMedia } from "@/lib/higgsfield";
+import { HF_PORTRAIT, HF_REFERENCE_PORTRAIT, PORTRAIT_CLIP, higgsfield, hfPortraitInput, hfReferencePortraitInput, persistHfMedia } from "@/lib/higgsfield";
 export const runtime = "nodejs";
 export const maxDuration = 60;
 async function handle(req: Request) {
@@ -16,17 +16,20 @@ async function handle(req: Request) {
     const row = await ownedDraft(id, who);
     if (!row) return json({ error: "Save this character first." }, 404);
     const draft = localDraftSchema.parse(JSON.parse(row.document));
-    const visual = visualFingerprint(draft), fingerprint = digest(`${HF_PORTRAIT}:${visual}`);
+    const refs=(await assets(id,who)).filter(a=>a.purpose==="reference").map(a=>a.url);
+    draft.referenceFingerprint=referenceFingerprint(refs);
+    const model=refs.length?HF_REFERENCE_PORTRAIT:HF_PORTRAIT;
+    const visual = visualFingerprint(draft), fingerprint = digest(`${model}:${visual}`);
     let job = (await renders(id, who)).find(r => r.clip_id === PORTRAIT_CLIP && r.fingerprint === fingerprint);
     if (req.method === "POST" && !job) {
       if (setting("HER_LAUNCHPAD_GENERATION_ENABLED") !== "true" || !setting("HF_API_KEY") || !setting("BLOB_READ_WRITE_TOKEN")) return json({ error: "Higgsfield portrait credits are not connected. No generation was submitted." }, 503);
       fundedCreator(who);
-      if (draft.appearance.trim().length < 20 || draft.background.trim().length < 10) throw new Error("Describe the character's appearance and choose a background in Voice & setting first.");
+      if (draft.appearance.trim().length < 20 && !refs.length) throw new Error("Describe the character or upload reference images first.");
       if (!draft.rightsConfirmed || row.face_status !== "draft" || row.mint) throw new Error("Confirm image rights; a launched or trained character's image cannot change.");
       await takeQuota(`image:${who}`, 5);
       job = { id: crypto.randomUUID(), character_id: id, wallet: who, clip_id: PORTRAIT_CLIP, fingerprint, provider: "higgsfield", provider_id: null, status: "submitting", video_url: null, created_at: Date.now() };
       if (!(await claimRender(job))) return json({ status: "submitting" });
-      const submitted = await higgsfield(HF_PORTRAIT, hfPortraitInput(draft));
+      const submitted = await higgsfield(model, refs.length ? hfReferencePortraitInput(draft,refs) : hfPortraitInput(draft));
       if (!submitted.request_id) throw new Error("Submission needs reconciliation. Do not submit another portrait.");
       await updateRender(job.id, who, submitted.request_id, "queued", null);
       return json({ status: "queued" });
@@ -44,7 +47,8 @@ async function handle(req: Request) {
     }
     if (job.status === "ready" && job.video_url) {
       const current = await ownedDraft(id, who);
-      if (current && current.image_url !== job.video_url && visualFingerprint(localDraftSchema.parse(JSON.parse(current.document))) === visual && current.face_status === "draft" && !current.mint)
+      const currentRefs=(await assets(id,who)).filter(a=>a.purpose==="reference").map(a=>a.url);
+      if (current && current.image_url !== job.video_url && visualFingerprint({...localDraftSchema.parse(JSON.parse(current.document)),referenceFingerprint:referenceFingerprint(currentRefs)}) === visual && current.face_status === "draft" && !current.mint)
         await saveImage(id, who, job.video_url, visual);
       return json({ status: "ready", image: job.video_url, imageFingerprint: visual });
     }

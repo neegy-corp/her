@@ -9,11 +9,20 @@ import {
   saveImage,
   coinIntent,
 } from "@/lib/launchpad-store";
-import { localDraftSchema, visualFingerprint } from "@/lib/launchpad";
+import { localDraftSchema, referenceFingerprint } from "@/lib/launchpad";
 import { digest, imageType, fundedCreator } from "@/lib/launchpad-media";
 import { assetPurpose, REFERENCE_LIMIT } from "@/lib/acp-config";
 export const runtime = "nodejs";
 export const maxDuration = 60;
+export async function GET(req:Request) {
+  try {return await withDatabase(setting("DATABASE_URL"),async()=>{
+    const who=await wallet(req);if(!who)return json({error:"Connect your developer wallet."},401);
+    const id=new URL(req.url).searchParams.get("id")||"";
+    if(!await ownedDraft(id,who))return json({error:"Save this character first."},404);
+    const references=(await assets(id,who)).filter(a=>a.purpose==="reference").map(a=>({id:a.id,url:a.url}));
+    return json({references,referenceFingerprint:referenceFingerprint(references.map(a=>a.url))});
+  });}catch{return json({error:"Reference photos unavailable."},503);}
+}
 export async function POST(req: Request) {
   try {
     return await withDatabase(setting("DATABASE_URL"), async () => {
@@ -100,19 +109,10 @@ export async function POST(req: Request) {
           "Another upload filled this reference slot. Refresh before adding another photo.",
         );
       }
-      const first =
-        purpose === "reference" &&
-        !row.image_url &&
-        row.face_status === "draft" &&
-        !row.mint;
-      if (first) await saveImage(id, who, result.url, visualFingerprint(draft));
       return json({
         uploaded: true,
         url: result.url,
         purpose,
-        ...(first
-          ? { image: result.url, imageFingerprint: visualFingerprint(draft) }
-          : {}),
       });
     });
   } catch (e) {

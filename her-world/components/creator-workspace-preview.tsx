@@ -56,8 +56,8 @@ export default function CreatorWorkspacePreview() {
           </>}
           {view === "show" && <>
             <div className="workspace-scene-title"><GripVertical size={15} /><strong>The opening</strong><span>10 sec target</span></div>
-            <Label htmlFor="preview-script">What do they say?</Label><Textarea id="preview-script" maxLength={300} rows={4} placeholder="Write their first line. Give chat something to react to…" value={script} onChange={e => setScript(e.target.value)} />
-            <div className="workspace-sequence" aria-label="Show sequence"><span className="sequence-scene"><Clapperboard size={15} />Opening scene</span><ArrowRight size={14} /><span>Chat break</span><ArrowRight size={14} /><span className="sequence-next"><Plus size={15} />Next scene</span></div>
+            <Label htmlFor="preview-script">What do they say?</Label><Textarea id="preview-script" maxLength={300} rows={4} placeholder="Write their first line and set the scene…" value={script} onChange={e => setScript(e.target.value)} />
+            <div className="workspace-sequence" aria-label="Show sequence"><span className="sequence-scene"><Clapperboard size={15} />Opening scene</span><ArrowRight size={14} /><span>Generated video</span><ArrowRight size={14} /><span className="sequence-next"><Plus size={15} />Next scene</span></div>
             <p>Write the scene, set the action, then generate a clip in the builder.</p>
           </>}
           {view === "launch" && <>

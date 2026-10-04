@@ -24,6 +24,8 @@ export const scriptRequestSchema = z.object({
     )
     .max(40)
     .default([]),
+}).refine(value => value.mode === "script" && value.messages.length === 0, {
+  message: "Chat-driven generation has been removed. Use a creator script or prompt.",
 });
 export function scriptMessages(
   draft: CharacterDraft,
@@ -42,6 +44,7 @@ export function scriptMessages(
         brief,
         appearance: draft.appearance,
         background: draft.background,
+        voice: draft.voicePrompt || "Generate a natural voice suited to this character",
         mode,
         audience:
           mode === "reply"
@@ -63,7 +66,7 @@ export function scriptToClip(
     ...script,
     duration: Math.max(script.duration, minimumDuration) as 5 | 10 | 15,
     id: crypto.randomUUID(),
-    chatPause: mode === "reply" ? 0 : 30,
+    chatPause: 0,
     mode: mode === "reply" ? "speech" : "performance",
   };
 }

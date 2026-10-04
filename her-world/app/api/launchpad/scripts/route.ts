@@ -35,6 +35,7 @@ export async function POST(req: Request) {
       const raw = await req.text();
       if (raw.length > 26000) return json({ error: "Request too large." }, 413);
       const body = scriptRequestSchema.parse(JSON.parse(raw));
+      if(body.mode!=="script" || body.messages.length) return json({error:"Chat-driven generation has been removed. Use a creator script or prompt."},400);
       const row = await ownedDraft(body.id, who);
       if (!row)
         return json(
@@ -42,18 +43,13 @@ export async function POST(req: Request) {
           404,
         );
       const parsed = mediaDraftSchema.safeParse(JSON.parse(row.document));
-      if (!parsed.success) throw new Error("Complete the character name, bio, appearance, personality and setting before writing scenes. A coin ticker is not needed yet.");
+      if (!parsed.success) throw new Error("Add a character name and check the creative prompts before writing scenes. A coin ticker is not needed yet.");
       const draft = parsed.data;
       if (!draft.rightsConfirmed)
         throw new Error("Confirm character rights first.");
       if (streamCreditsEnabled()) await requireVideoCredit(body.id,who);
       await takeQuota(`script:${who}`, streamCreditsEnabled() ? 600 : 100);
-      const messages = body.messages.filter(
-        (m) => m.at >= Date.now() - 120000 && m.at <= Date.now() + 10000,
-      );
-      if (body.mode !== "script" && !messages.length)
-        throw new Error("There are no fresh chat messages to respond to.");
-      const result = await generateScene(scriptMessages(draft, body.mode, body.brief, messages));
+      const result = await generateScene(scriptMessages(draft, "script", body.brief, []));
       return json({
         clip: scriptToClip(result, body.mode),
         generated: true,

@@ -8,74 +8,27 @@ import { useEffect, useState } from "react";
 import {
   ArrowDown,
   ArrowUp,
-  ImagePlus,
   Plus,
   Play,
   Trash2,
   Video,
-  Upload,
   LoaderCircle,
 } from "lucide-react";
 import type { CharacterDraft } from "@/lib/launchpad";
 import type { ShowPlan, ShowClip } from "@/lib/show";
-import { REFERENCE_LIMIT } from "@/lib/acp-config";
 import { addGeneratedScene, emptyScene } from "@/lib/creator-workflow";
 import StreamCredits from "./stream-credits";
 import ContinuousProgram from "./continuous-program";
-type RefPhoto = { id: string; name: string; file: Blob };
 type Render = {
   id: string;
   clip_id: string;
   status: string;
   video_url?: string;
 };
-function photoDB() {
-  return new Promise<IDBDatabase>((resolve, reject) => {
-    const r = indexedDB.open("her-reference-photos", 1);
-    r.onupgradeneeded = () =>
-      r.result.createObjectStore("photos", { keyPath: "id" });
-    r.onsuccess = () => resolve(r.result);
-    r.onerror = () => reject(r.error);
-  });
-}
-async function readPhotos(draftId: string) {
-  const db = await photoDB();
-  try {
-    return await new Promise<RefPhoto[]>((resolve, reject) => {
-      const r = db.transaction("photos").objectStore("photos").getAll();
-      r.onsuccess = () =>
-        resolve(
-          r.result.filter((v: { draftId: string }) => v.draftId === draftId),
-        );
-      r.onerror = () => reject(r.error);
-    });
-  } finally {
-    db.close();
-  }
-}
-async function storePhoto(draftId: string, file: File) {
-  const db = await photoDB();
-  try {
-    await new Promise<void>((resolve, reject) => {
-      const tx = db.transaction("photos", "readwrite");
-      tx.objectStore("photos").put({
-        id: crypto.randomUUID(),
-        draftId,
-        name: file.name,
-        file,
-      });
-      tx.oncomplete = () => resolve();
-      tx.onerror = () => reject(tx.error);
-    });
-  } finally {
-    db.close();
-  }
-}
 export default function ShowEditor({
   draft,
   onChange,
   onNotice,
-  onImage,
   servicesAvailable,
   scriptsAvailable,
   videosAvailable,
@@ -83,41 +36,17 @@ export default function ShowEditor({
   draft: CharacterDraft;
   onChange: (show: ShowPlan) => void;
   onNotice: (s: string) => void;
-  onImage: (image: { image: string; imageFingerprint: string }) => void;
   servicesAvailable: boolean;
   scriptsAvailable: boolean;
   videosAvailable: boolean;
 }) {
-  const [photos, setPhotos] = useState<(RefPhoto & { url: string })[]>([]),
-    [busy, setBusy] = useState(""),
+  const [busy, setBusy] = useState(""),
     [error, setError] = useState(""),
     [renders, setRenders] = useState<Render[]>([]),
     [preview, setPreview] = useState("");
   const [preparing, setPreparing] = useState(false);
   const show = draft.show;
-  useEffect(
-    () => () => photos.forEach((photo) => URL.revokeObjectURL(photo.url)),
-    [photos],
-  );
-  useEffect(() => {
-    let active = true;
-    void readPhotos(draft.id)
-      .then((rows) => {
-        if (!active) return;
-        const result = rows.map((r) => ({
-          ...r,
-          url: URL.createObjectURL(r.file),
-        }));
-        setPhotos(result);
-      })
-      .catch(() =>
-        setError("Reference image storage is unavailable in this browser."),
-      );
-    setRenders([]);
-    return () => {
-      active = false;
-    };
-  }, [draft.id]);
+  useEffect(() => { setRenders([]); }, [draft.id]);
   const update = (id: string, patch: Partial<ShowClip>) =>
     onChange({
       ...show,
@@ -127,32 +56,6 @@ export default function ShowEditor({
     const next = [...show.clips];
     [next[index], next[index + by]] = [next[index + by], next[index]];
     onChange({ ...show, clips: next });
-  }
-  async function addPhoto(file: File) {
-    setError("");
-    if (
-      !["image/png", "image/jpeg", "image/webp"].includes(file.type) ||
-      file.size > 4 * 1024 * 1024
-    ) {
-      setError("Choose a PNG, JPEG or WebP under 4 MB.");
-      return;
-    }
-    if (photos.length >= REFERENCE_LIMIT) {
-      setError(
-        "Use one frontal photo and up to three additional reference views.",
-      );
-      return;
-    }
-    try {
-      await storePhoto(draft.id, file);
-      const rows = await readPhotos(draft.id);
-      setPhotos(rows.map((r) => ({ ...r, url: URL.createObjectURL(r.file) })));
-      onNotice(
-        "Reference photo saved on this device. Upload it before generating video.",
-      );
-    } catch {
-      setError("Could not save this photo. Browser storage may be full.");
-    }
   }
   async function call(action: string, body?: unknown) {
     const r = await fetch(
@@ -168,37 +71,6 @@ export default function ShowEditor({
     const d = (await r.json()) as { error?: string; renders?: Render[] };
     if (!r.ok) throw new Error(d.error || "Video service unavailable.");
     return d;
-  }
-  async function upload(photo: RefPhoto) {
-    setBusy(photo.id);
-    setError("");
-    try {
-      if (!draft.rightsConfirmed)
-        throw new Error(
-          "Confirm your character image rights in the Character tab first.",
-        );
-      await call("?action=save", { draft });
-      const form = new FormData();
-      form.set("id", draft.id);
-      form.set("image", photo.file, photo.name);
-      const r = await fetch("/api/launchpad/assets", {
-        method: "POST",
-        body: form,
-      });
-      const data = (await r.json()) as {
-        error?: string;
-        image?: string;
-        imageFingerprint?: string;
-      };
-      if (!r.ok) throw new Error(data.error || "Photo upload unavailable.");
-      if (data.image && data.imageFingerprint)
-        onImage({ image: data.image, imageFingerprint: data.imageFingerprint });
-      onNotice("Reference photo uploaded to your character.");
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Upload unavailable.");
-    } finally {
-      setBusy("");
-    }
   }
   async function render(clip: ShowClip) {
     setBusy(clip.id);
@@ -279,44 +151,11 @@ export default function ShowEditor({
         {busy === "script" ? "Writing scene…" : "Write a scene with AI"}
       </Button>
       </div>
-      <details className="lp-details" open={photos.length > 0 || undefined}><summary>Character reference photos</summary>
-      <div className="lp-photo-upload">
-        <label>
-          <ImagePlus size={23} />
-          <strong>Upload reference photos</strong>
-          <span>
-            Front view + up to 3 extra views · 4 MB each. Uploads use public provider links.
-          </span>
-          <input
-            type="file"
-            accept="image/png,image/jpeg,image/webp"
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (file) void addPhoto(file);
-              e.target.value = "";
-            }}
-          />
-        </label>
-      </div>
-      {!!photos.length && (
-        <div className="lp-reference-grid">
-          {photos.map((p) => (
-            <div key={p.id}>
-              <img src={p.url} alt={p.name} />
-              <span>{p.name}</span>
-              <Button disabled={!!busy || !servicesAvailable} onClick={() => void upload(p)}>
-                <Upload size={12} />{" "}
-                {busy === p.id ? "Uploading…" : "Upload to character"}
-              </Button>
-            </div>
-          ))}
-        </div>
-      )}
-      </details>
+      <p className="lp-field-note">Manage reference images on the <a href={`/create/${draft.id}/character`}>Character page</a>. Voice and setting prompts apply to every new video.</p>
       <div className="lp-show-flow">
         <span>SCRIPT</span>
         <ArrowDown size={13} />
-        <span>CHAT BREAK</span>
+        <span>GENERATED VIDEO</span>
         <ArrowDown size={13} />
         <span>NEXT SCENE</span>
       </div>
@@ -397,10 +236,6 @@ export default function ShowEditor({
               Length
               <StudioSelect label="Clip length" value={clip.duration} onValueChange={duration => update(clip.id, {duration})} options={[5,10,15].map(value => ({value, label: `${value} seconds`}))} />
             </label>
-            <label>
-              Chat pause
-              <StudioSelect label="Chat pause" value={clip.chatPause} onValueChange={chatPause => update(clip.id, {chatPause})} options={[0,15,30,60,120].map(value => ({value, label: value ? `${value} seconds` : "None"}))} />
-            </label>
             <Button
               variant="outline" className="lp-secondary"
               disabled={!!busy || !servicesAvailable || !videosAvailable || !draft.rightsConfirmed || emptyScene(clip)}
@@ -415,9 +250,7 @@ export default function ShowEditor({
             </Button>
           </div>
           <details className="lp-details"><summary>Rendering details</summary><p className="lp-field-note">
-            {clip.mode === "speech"
-              ? "Tavus renders your written speech using the trained face. Speech length determines clip duration; stage direction is reserved for performance clips."
-              : "Kling animates your image and direction. Generated dialogue and voice may vary; preview before publishing."}
+            Higgsfield generates the performance, voice and setting from your character references, prompts and dialogue. Review each clip before publishing; voice consistency can vary.
           </p></details>
         </section>
       ))}
@@ -435,7 +268,7 @@ export default function ShowEditor({
                 script: "",
                 direction: "",
                 duration: 10,
-                chatPause: 30,
+                chatPause: 0,
                 mode: "performance",
               },
             ],
@@ -448,17 +281,17 @@ export default function ShowEditor({
         <label className="lp-check">
           <Checkbox aria-label="Generate new scenes while streaming" checked={show.generative} onCheckedChange={checked => onChange({...show, generative: checked === true})} />
           <span>
-            <strong>{show.continuous ? "Generate new scenes while streaming." : "Let chat write the next chapter."}</strong>
+            <strong>Generate new scenes while streaming.</strong>
             <small>
-              {show.continuous ? "Recent chat becomes new scenes between clips. Quiet chat continues the story, leaving a render slot for viewers." : "After the script ends, collect suggestions and turn the strongest ideas into the next scene. One video at a time."}
+              Continue the show from your scripts, character prompt, voice and setting. New scenes render while prepared videos play.
             </small>
           </span>
         </label>
         {show.generative && (
           <div className="lp-clip-options">
             <label>
-              Collect ideas for
-              <StudioSelect label="Collect ideas for" value={show.chatWindow} onValueChange={chatWindow => onChange({...show, chatWindow})} options={[15,30,60,120].map(value => ({value, label: `${value} seconds`}))} />
+              Generation interval
+              <StudioSelect label="Generation interval" value={show.chatWindow} onValueChange={chatWindow => onChange({...show, chatWindow})} options={[15,30,60,120].map(value => ({value, label: `${value} seconds`}))} />
             </label>
             <label>
               New video limit

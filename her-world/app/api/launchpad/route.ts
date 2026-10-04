@@ -52,10 +52,10 @@ function capabilities(): LaunchStatus {
     generation:
       storage &&
       setting("HER_LAUNCHPAD_GENERATION_ENABLED") === "true" &&
-      !!(setting("HF_API_KEY") || setting("OPENAI_API_KEY")) &&
+      !!setting("HF_API_KEY") &&
       !!setting("BLOB_READ_WRITE_TOKEN"),
     scripts: storage && setting("ACP_SCRIPTS_ENABLED") === "true" && !!(setting("ANTHROPIC_API_KEY") || setting("OPENAI_API_KEY")),
-    videos: storage && setting("HER_LAUNCHPAD_VIDEOS_ENABLED") === "true" && !!((setting("HF_API_KEY") && setting("BLOB_READ_WRITE_TOKEN")) || setting("FAL_KEY") || setting("TAVUS_API_KEY")),
+    videos: storage && setting("HER_LAUNCHPAD_VIDEOS_ENABLED") === "true" && !!(setting("HF_API_KEY") && setting("BLOB_READ_WRITE_TOKEN")),
     faces:
       storage &&
       setting("HER_LAUNCHPAD_FACES_ENABLED") === "true" &&
@@ -67,7 +67,7 @@ function capabilities(): LaunchStatus {
       !!setting("SOLANA_RPC_URL"),
     // A configured camera is not evidence of a supported multi-tenant broadcaster.
     broadcast: false,
-    imageProvider: setting("HF_API_KEY") ? "higgsfield" : "openai",
+    imageProvider: "higgsfield",
     message: storage
       ? "Character drafts are open. Live launch services are being connected."
       : "Design and save locally. Cloud launch services are not activated yet.",

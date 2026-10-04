@@ -12,6 +12,7 @@ export async function publicTokenRows(offset: number) {
   ).results;
 }
 import type { CharacterDraft } from "./launchpad";
+import { referenceFingerprint } from "./launchpad";
 
 export type DraftRow = {
   id: string;
@@ -45,6 +46,7 @@ export async function saveDraft(draft: CharacterDraft, owner: string) {
       throw new Error("Deployed coin artwork is locked.");
   }
   const storedAssets = await assets(draft.id, owner);
+  draft={...draft,referenceFingerprint:referenceFingerprint(storedAssets.filter(a=>a.purpose==="reference").map(a=>a.url))};
   for (const [field, purpose] of [
     ["coinPfp", "pfp"],
     ["coinBanner", "banner"],

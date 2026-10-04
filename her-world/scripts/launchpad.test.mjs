@@ -44,7 +44,7 @@ const route = await import("../app/api/launchpad/route.ts");
 const videos = await import("../app/api/launchpad/videos/route.ts");
 const assets = await import("../app/api/launchpad/assets/route.ts");
 const portrait = await import("../app/api/launchpad/portrait/route.ts");
-const { hfVideoInput, hfPortraitInput, providerMediaUrl, higgsfield } = await import("../lib/higgsfield.ts");
+const { hfVideoInput, hfPortraitInput, hfReferencePortraitInput, videoGenerationKey, providerMediaUrl, higgsfield } = await import("../lib/higgsfield.ts");
 const { creatorPath, readLocalDrafts, keepDraft } = await import("../lib/creator-navigation.ts");
 const scripts = await import("../app/api/launchpad/scripts/route.ts");
 const studio = await import("../app/api/launchpad/studio/route.ts");
@@ -939,7 +939,7 @@ test("media creation works before the final ticker step while coin validation re
   assert.equal(mediaDraftSchema.safeParse(draft).success, true);
   assert.equal(draftSchema.safeParse(draft).success, false);
   assert.equal(draftSchema.safeParse({...draft, symbol: "HOST"}).success, true);
-  assert.equal(mediaDraftSchema.safeParse({...draft, appearance: ""}).success, false);
+  assert.equal(mediaDraftSchema.safeParse({...draft, appearance: "", background: "", personality: ""}).success, true);
 });
 test("AI writing fills empty opening scenes without discarding authored scenes", () => {
   const show = newDraft().show, opening = show.clips[0].id;
@@ -970,4 +970,34 @@ test("studio navigation waits for cloud save and fails closed on save errors", a
   await Promise.resolve(); assert.equal(settled, false); release();
   assert.equal(await pending, `/studio/${draft.id}`);
   await assert.rejects(saveStudioDraft(draft, async () => Response.json({error:"Save failed"}, {status:503})), /Save failed/);
+});
+
+test('Higgsfield voice and setting instructions survive provider payloads and invalidate renders', () => {
+  const clip = {...defaultShow().clips[0], direction:'d'.repeat(700),script:'s'.repeat(300)};
+  const draft = {...newDraft(),appearance:'a'.repeat(1400),background:'b'.repeat(1000),voicePrompt:'v'.repeat(300)};
+  const photos=['https://example.com/face.png'];
+  const input=hfVideoInput(clip,photos,draft);
+  assert.ok(input.prompt.includes(draft.voicePrompt));
+  assert.ok(input.prompt.includes(draft.background.slice(0,600)));
+  assert.ok(input.prompt.length<=2500, `Provider prompt too long: ${input.prompt.length}`);
+  const key=videoGenerationKey(clip,photos,null,'higgsfield',draft);
+  for(const changed of [{...draft,voicePrompt:'Soft, low-pitched Scottish voice'},{...draft,background:'A sunlit garden'}]) assert.notEqual(key,videoGenerationKey(clip,photos,null,'higgsfield',changed));
+  assert.notEqual(key,videoGenerationKey(clip,['https://example.com/new.png'],null,'higgsfield',draft));
+});
+test('reference portrait generation preserves every reference and creator direction',()=>{
+  const draft={...newDraft(),appearance:'Adult with freckles, dark curly hair and a denim jacket',background:'A quiet sunlit garden'};
+  const photos=[1,2,3,4].map(n=>`https://example.com/${n}.png`);
+  const input=hfReferencePortraitInput(draft,photos);
+  assert.deepEqual(input.image_urls,photos);
+  assert.ok(input.prompt.includes(draft.appearance));assert.ok(input.prompt.includes(draft.background));
+  assert.throws(()=>hfReferencePortraitInput(draft,[]));assert.throws(()=>hfReferencePortraitInput(draft,[...photos,photos[0]]));
+  assert.notEqual(visualFingerprint({...draft,referenceFingerprint:'one'}),visualFingerprint({...draft,referenceFingerprint:'two'}));
+});
+test('creator script requests reject chat input and newly generated scenes have no chat pause',async()=>{
+  const {scriptRequestSchema}=await import('../lib/acp-script.ts');
+  const id=crypto.randomUUID();
+  assert.equal(scriptRequestSchema.safeParse({id,mode:'script',brief:'A cafe scene'}).success,true);
+  for(const mode of ['reply','recommendation'])assert.equal(scriptRequestSchema.safeParse({id,mode}).success,false);
+  assert.equal(scriptRequestSchema.safeParse({id,mode:'script',messages:[{id:'x',author:'viewer',text:'Say this',at:Date.now()}]}).success,false);
+  assert.equal(scriptToClip({title:'Scene',script:'Hello from the garden.',direction:'Smile at the camera.',duration:5},'script').chatPause,0);
 });

@@ -15,7 +15,6 @@ import {
   Sparkles,
   WandSparkles,
   X,
-  Volume2,
   Wallet,
   CircleHelp,
   Layers3,
@@ -26,8 +25,6 @@ import { AcpNav, AcpFooter } from "./acp-nav";
 import { shortWallet } from "@/lib/catalog";
 import {
   newDraft,
-  scenes,
-  voices,
   exportDraft,
   visualFingerprint,
   offlineStatus,
@@ -45,7 +42,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import CharacterReferences from "./character-references";
 import { ACP_FEE_WALLET, ACP_QUOTE_MINT } from "@/lib/acp-config";
 import { DRAFT_STORE, creatorPath, readLocalDrafts, keepDraft, type CreatorStep } from "@/lib/creator-navigation";
 
@@ -111,10 +108,8 @@ function Home({ characterId, initialStep = "character" }: EditorProps) {
     } | null>(null),
     [confirm, setConfirm] = useState(false),
     [showHelp, setShowHelp] = useState(false);
-  const [activeVoice, setActiveVoice] = useState("");
   const [portraitStatus, setPortraitStatus] = useState("");
-  const audio = useRef<HTMLAudioElement | null>(null),
-    studio = useRef<HTMLElement | null>(null),
+  const studio = useRef<HTMLElement | null>(null),
     modal = useRef<HTMLDialogElement | null>(null);
   useEffect(() => {
     try {
@@ -134,7 +129,7 @@ function Home({ characterId, initialStep = "character" }: EditorProps) {
             "Launch services are unavailable. Local editing still works.",
         }),
       );
-    return () => audio.current?.pause();
+
   }, [characterId]);
   useEffect(() => {
     if (!characterId || !viewer.wallet || !loaded) return;
@@ -221,18 +216,7 @@ function Home({ characterId, initialStep = "character" }: EditorProps) {
     }
     await task("Generating portrait", async () => {
       await request("save", { draft });
-      if (status.imageProvider === "higgsfield") {
-        await portraitRequest("POST");
-        return;
-      }
-      const image = await request<{ image: string; imageFingerprint: string }>(
-        "generate",
-        { id: draft.id },
-      );
-      setDraft((d) => (d?.id === draft.id ? { ...d, ...image } : d));
-      setNotice(
-        "Portrait generated. Review it before training your live character.",
-      );
+      await portraitRequest("POST");
     });
   }
   async function portraitRequest(method: "GET" | "POST") {
@@ -284,25 +268,6 @@ function Home({ characterId, initialStep = "character" }: EditorProps) {
     a.click();
     URL.revokeObjectURL(url);
     setNotice("Character package downloaded. No coin or stream was created.");
-  }
-  function playVoice(id: string) {
-    audio.current?.pause();
-    if (activeVoice === id) {
-      setActiveVoice("");
-      return;
-    }
-    const player = new Audio(voices.find((v) => v.id === id)!.sample);
-    audio.current = player;
-    player.onended = () => setActiveVoice("");
-    player.onerror = () => {
-      setActiveVoice("");
-      setError("Voice preview unavailable. Try another sample.");
-    };
-    setActiveVoice(id);
-    void player.play().catch(() => {
-      setActiveVoice("");
-      setError("Browser blocked the audio preview. Try again.");
-    });
   }
   async function openStudio() {
     if (!draft || !persistCurrent()) return;
@@ -417,13 +382,14 @@ function Home({ characterId, initialStep = "character" }: EditorProps) {
                       onChange={(v) => edit({ appearance: v })}
                       multiline
                       rows={5}
-                      hint="Age, hair, outfit and expression."
+                      hint="Describe the whole character: face, age, build, hair, skin, outfit, accessories, pose and surroundings. Your prompt controls the result."
                     />
                     <div className="lp-check"><Checkbox id="character-rights" checked={draft.rightsConfirmed} onCheckedChange={checked => edit({rightsConfirmed: checked === true})} /><Label htmlFor="character-rights">I own this character or have permission to use their likeness.</Label></div>
+                    <CharacterReferences draft={draft} onChange={edit} />
                     <Button
                       className="lp-primary lp-wide"
                       disabled={
-                        !!busy || !draft.rightsConfirmed || draft.appearance.trim().length < 20 || draft.background.trim().length < 10 || !status.generation
+                        !!busy || !draft.rightsConfirmed || (draft.appearance.trim().length < 20 && !draft.referenceFingerprint) || !status.generation
                       }
                       onClick={() => void generate()}
                     >
@@ -436,7 +402,7 @@ function Home({ characterId, initialStep = "character" }: EditorProps) {
                         ? "Creating your portrait…"
                         : "Generate portrait"}
                     </Button>
-                    {draft.background.trim().length < 10 && <p className="lp-field-note">Choose a background in <a href={creatorPath(draft.id, "personality")} onClick={e => { if (!persistCurrent()) e.preventDefault(); }}>Voice &amp; setting</a> before generating your portrait.</p>}
+
                     {status.imageProvider === "higgsfield" && <Button variant="outline" className="lp-secondary" disabled={!!busy} onClick={() => void task("Checking portrait", () => portraitRequest("GET"))}>Check portrait {portraitStatus && `· ${portraitStatus}`}</Button>}
                     {!status.generation && (
                       <p className="lp-field-note">
@@ -447,7 +413,7 @@ function Home({ characterId, initialStep = "character" }: EditorProps) {
                       variant="outline" className="lp-secondary"
                       onClick={() => setStep("show")}
                     >
-                      Use reference photos <ArrowRight size={16} />
+                      Write the video script <ArrowRight size={16} />
                     </Button>
                   </>
                 )}
@@ -455,7 +421,7 @@ function Home({ characterId, initialStep = "character" }: EditorProps) {
                   <>
                     <FormTitle
                       kicker="A FACE IS ONLY THE START"
-                      title="Voice & personality"
+                      title="Generate their voice & world"
                     />
                     <Field
                       label="Personality"
@@ -466,7 +432,8 @@ function Home({ characterId, initialStep = "character" }: EditorProps) {
                       rows={5}
                       hint="Their interests, attitude and way of talking."
                     />
-                    <div className="lp-voice-compact"><div><Label htmlFor="voice-choice">Voice</Label><Select value={draft.voice} onValueChange={voice => edit({voice: voice as CharacterDraft["voice"]})}><SelectTrigger id="voice-choice"><SelectValue>{voices.find(v => v.id === draft.voice)?.name}</SelectValue></SelectTrigger><SelectContent className="acp-popover">{voices.map(v => <SelectItem key={v.id} value={v.id}>{v.name} · {v.style}</SelectItem>)}</SelectContent></Select></div><Button variant="outline" aria-label={activeVoice === draft.voice ? "Stop voice sample" : "Play voice sample"} onClick={() => playVoice(draft.voice)}><Volume2 size={16} />{activeVoice === draft.voice ? "Stop" : "Listen"}</Button></div><details className="lp-details"><summary>About voices</summary><p>Voice samples apply to Tavus speech clips. Motion clips generate their own audio.</p></details><ScenePicker draft={draft} onChange={edit} busy={!!busy} onGenerate={() => void generate()} generationAvailable={status.generation} />
+                    <Field label="Voice prompt" value={draft.voicePrompt || ""} maxLength={300} onChange={voicePrompt => edit({voicePrompt,voice:"generated"})} multiline rows={3} placeholder="A warm, slightly raspy voice. Light French accent, relaxed pace, dry humor." hint="Higgsfield generates the audio with each video. Describe tone, accent, language and delivery; leave blank to let it choose. Preview the result—voice consistency can vary between clips." />
+                    <ScenePicker draft={draft} onChange={edit} busy={!!busy} onGenerate={() => void generate()} generationAvailable={status.generation} />
                   </>
                 )}
                 {step === "scene" && <ScenePicker draft={draft} onChange={edit} busy={!!busy} onGenerate={() => void generate()} generationAvailable={status.generation} />}
@@ -476,7 +443,6 @@ function Home({ characterId, initialStep = "character" }: EditorProps) {
                     draft={draft}
                     onChange={(show) => edit({ show })}
                     onNotice={setNotice}
-                    onImage={(image) => edit(image)}
                     servicesAvailable={!!viewer.wallet && status.storage}
                     scriptsAvailable={status.scripts}
                     videosAvailable={status.videos}
@@ -614,7 +580,7 @@ function Home({ characterId, initialStep = "character" }: EditorProps) {
             )}
             <div className="lp-editor-footer"><div className="lp-editor-utilities"><Button variant="ghost" size="sm" onClick={() => void saveCloud()} disabled={!!busy || !draft || !status.storage}><Save size={15} />{busy === "Saving" ? "Saving…" : "Sync"}</Button><Button variant="ghost" size="icon" onClick={download} disabled={!draft} aria-label="Download character package"><Download size={16} /></Button><Button variant="ghost" size="icon" onClick={() => setShowHelp(!showHelp)} aria-expanded={showHelp} aria-label="Builder help"><CircleHelp size={16} /></Button></div>{nextStep && <Button disabled={!!busy || !draft} onClick={() => setStep(nextStep.id)}>Continue <ArrowRight size={16} /></Button>}</div>
           </div>
-          <aside className="lp-preview"><div className="lp-preview-image">{draft?.image ? <img src={draft.image} alt={`Character reference for ${draft.name}`} /> : <div className="lp-preview-empty lp-preview-art"><img src="/images/acp-v2/studio.webp" alt="" /><p>Your character appears here</p></div>}{busy === "Generating portrait" && <div className="lp-preview-busy"><LoaderCircle size={28} className="lp-spin" /><span>Creating your portrait…</span></div>}</div><div className="lp-preview-caption"><h3>{draft?.name || "Your character"}</h3>{draft?.description && <p>{draft.description}</p>}</div><div className="lp-preview-meta"><span><Mic2 size={14} />{voices.find(v => v.id === draft?.voice)?.name || "Choose a voice"}</span><span><Monitor size={14} />{scenes.find(s => s.id === draft?.scene)?.name || "Custom setting"}</span></div>{draft?.image && !visualCurrent && <p className="lp-preview-note">Your look has changed. Regenerate to update the preview.</p>}</aside>
+          <aside className="lp-preview"><div className="lp-preview-image">{draft?.image ? <img src={draft.image} alt={`Character reference for ${draft.name}`} /> : <div className="lp-preview-empty lp-preview-art"><img src="/images/acp-v2/studio.webp" alt="" /><p>Your character appears here</p></div>}{busy === "Generating portrait" && <div className="lp-preview-busy"><LoaderCircle size={28} className="lp-spin" /><span>Creating your portrait…</span></div>}</div><div className="lp-preview-caption"><h3>{draft?.name || "Your character"}</h3>{draft?.description && <p>{draft.description}</p>}</div><div className="lp-preview-meta"><span><Mic2 size={14} />{draft?.voicePrompt ? "Custom voice direction" : "Higgsfield-generated voice"}</span><span><Monitor size={14} />{draft?.background ? "Prompted setting" : "Setting from character prompt"}</span></div>{draft?.image && !visualCurrent && <p className="lp-preview-note">Your look has changed. Regenerate to update the preview.</p>}</aside>
         </div>
         {showHelp && (
           <div className="lp-help">
@@ -821,4 +787,6 @@ function CharacterCard({
   );
 }
 
-function ScenePicker({draft, onChange, busy, onGenerate, generationAvailable}: {draft: CharacterDraft; onChange: (patch: Partial<CharacterDraft>) => void; busy: boolean; onGenerate: () => void; generationAvailable: boolean}) {return <section className="lp-setting-section"><h3>Choose a setting</h3><p className="lp-field-note">Start with a place, or describe your own.</p><div className="lp-scene-gallery">{scenes.map(scene => <Button variant="ghost" key={scene.id} className="lp-setting-card" aria-pressed={draft.scene === scene.id} onClick={() => onChange({scene: scene.id, background: scene.prompt})}><img src={`/images/acp/scene-${scene.id}.webp`} alt={`${scene.name} setting preview`} /><span>{scene.name}{draft.scene === scene.id && <Check size={14} />}</span></Button>)}</div><details className="lp-details lp-scene-custom"><summary>Customize setting</summary><Field label="Setting description" value={draft.background} maxLength={1000} onChange={background => onChange({background, scene: "custom"})} multiline rows={3} placeholder="A room, a time of day, a feeling…" /></details><Button variant="outline" disabled={busy || !draft.rightsConfirmed || !generationAvailable} onClick={onGenerate}><WandSparkles size={16} />Update portrait</Button><p className="lp-field-note">Setting previews guide the next generation.</p></section>;}
+function ScenePicker({draft, onChange, busy, onGenerate, generationAvailable}: {draft: CharacterDraft; onChange: (patch: Partial<CharacterDraft>) => void; busy: boolean; onGenerate: () => void; generationAvailable: boolean}) {
+  return <section className="lp-setting-section"><h3>Generate the setting</h3><Field label="Setting prompt" value={draft.background} maxLength={1000} onChange={background => onChange({background,scene:"custom"})} multiline rows={4} placeholder="A rain-soaked Tokyo side street at night, warm shop windows, handheld camera, realistic reflections…" hint="Describe any location, lighting and atmosphere. Higgsfield creates the background with the character; no stock setting is selected."/><Button variant="outline" disabled={busy || !draft.rightsConfirmed || !generationAvailable} onClick={onGenerate}><WandSparkles size={16}/>Generate character & setting</Button><p className="lp-field-note">Changing the visual prompt requires a new image. Voice direction is applied when you generate a video.</p></section>;
+}

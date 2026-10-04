@@ -4,6 +4,7 @@ import { ownedDraft, renders, assets } from "@/lib/launchpad-store";
 import { mediaDraftSchema } from "@/lib/launchpad";
 import { digest } from "@/lib/launchpad-media";
 import { streamCreditsEnabled } from "@/lib/stream-credit-store";
+import { videoGenerationKey } from "@/lib/higgsfield";
 export const runtime = "nodejs";
 export async function GET(req: Request) {
   try {
@@ -35,8 +36,7 @@ export async function GET(req: Request) {
         const render = jobs.find(
           (r) =>
             r.clip_id === clip.id &&
-            (r.fingerprint === digest(JSON.stringify({ clip, images: inputs, face: row.face_id, provider: r.provider })) ||
-              (r.provider !== "higgsfield" && r.fingerprint === legacyFingerprint)) &&
+            r.fingerprint === digest(videoGenerationKey(clip,inputs,row.face_id,r.provider,draft)) &&
             r.status === "ready" &&
             r.video_url,
         );
@@ -46,7 +46,7 @@ export async function GET(req: Request) {
         id,
         name: draft.name,
         mint: row.mint,
-        show: draft.show,
+        show: {...draft.show,clips:draft.show.clips.map(c=>({...c,chatPause:0}))},
         clips: clips.filter(Boolean),
         ready: clips.length > 0 && clips.every(Boolean),
         broadcastVerified: false,

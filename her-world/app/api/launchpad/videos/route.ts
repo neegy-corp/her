@@ -16,10 +16,9 @@ import {
   falClient,
   KLING,
   tavusVideo,
-  performanceInput,
   safeVideoUrl,
 } from "@/lib/launchpad-media";
-import { HF_VIDEO, PORTRAIT_CLIP, higgsfield, hfVideoInput, persistHfMedia } from "@/lib/higgsfield";
+import { HF_VIDEO, PORTRAIT_CLIP, higgsfield, hfVideoInput, videoGenerationKey, persistHfMedia } from "@/lib/higgsfield";
 import { streamCreditsEnabled, claimCreditRender } from "@/lib/stream-credit-store";
 import { VIDEO_CREDIT_EXHAUSTED } from "@/lib/stream-plans";
 export const runtime = "nodejs";
@@ -129,7 +128,7 @@ async function handle(req: Request) {
         return json({
           renders: saved.map(r => {
             const clip = document.success ? document.data.show.clips.find(c => c.id === r.clip_id) : undefined;
-            const current = !!clip && (r.fingerprint === digest(JSON.stringify({ clip, images: inputImages, face: row.face_id, provider: r.provider })) || (r.provider !== "higgsfield" && r.fingerprint === digest(JSON.stringify({ clip, images: inputImages, face: row.face_id }))));
+            const current = !!clip && document.success && r.fingerprint === digest(videoGenerationKey(clip,inputImages,row.face_id,r.provider,document.data));
             return { id: r.id, clip_id: r.clip_id, status: r.status, video_url: r.video_url, current };
           }),
         });
@@ -144,7 +143,7 @@ async function handle(req: Request) {
         );
       fundedCreator(who);
       const parsed = mediaDraftSchema.safeParse(JSON.parse(row.document));
-      if (!parsed.success) throw new Error("Complete the character name, bio, appearance, personality and setting before generating video. A coin ticker is not needed yet.");
+      if (!parsed.success) throw new Error("Add a character name and check the creative prompts before generating video. A coin ticker is not needed yet.");
       const draft = parsed.data;
       if (!draft.rightsConfirmed)
         throw new Error("Confirm your character image rights first.");
@@ -165,25 +164,15 @@ async function handle(req: Request) {
         throw new Error(
           "Upload a reference photo or generate your portrait first.",
         );
-      const provider = clip.mode === "speech" && row.face_status === "ready" && row.face_id && setting("TAVUS_API_KEY") ? "tavus" : setting("HF_API_KEY") ? "higgsfield" : clip.mode === "speech" ? "tavus" : "fal";
-      if (
-        provider === "tavus" &&
-        (!row.face_id ||
-          row.face_status !== "ready" ||
-          !setting("TAVUS_API_KEY"))
-      )
-        throw new Error(
-          "Train this character’s face before rendering scripted speech.",
-        );
-      if (clip.mode === "performance" && !setting("FAL_KEY") && !setting("HF_API_KEY"))
-        throw new Error("The motion video provider is not connected.");
-      if (provider === "higgsfield" && !setting("BLOB_READ_WRITE_TOKEN")) throw new Error("Generated video storage is not connected.");
+      if(!setting("HF_API_KEY"))throw new Error("Connect Higgsfield generation credits before creating videos.");
+      const provider = "higgsfield";
+      if (!setting("BLOB_READ_WRITE_TOKEN")) throw new Error("Generated video storage is not connected.");
       if (!clip.script.trim() && !clip.direction.trim())
         throw new Error("Write a script or stage direction first.");
       if (clip.mode === "speech" && !clip.script.trim())
         throw new Error("Write the words this character should say.");
       const fingerprint = digest(
-        JSON.stringify({ clip, images, face: row.face_id, provider }),
+        videoGenerationKey(clip,images,row.face_id,provider,draft),
       );
       const existing = (await renders(id, who)).find(
         (r) => r.clip_id === clip.id && r.fingerprint === fingerprint,
@@ -215,20 +204,7 @@ async function handle(req: Request) {
         );
       }
       // Persist before any charge. A timeout remains submitting; never automatically submit twice.
-      const requestId =
-        provider === "tavus"
-          ? (
-              await tavusVideo("", {
-                replica_id: row.face_id,
-                script: clip.script,
-                video_name: `${draft.name}: ${clip.title}`,
-              })
-            ).video_id
-          : provider === "higgsfield" ? (await higgsfield(HF_VIDEO, hfVideoInput(clip, images))).request_id : (
-              await falClient().queue.submit(KLING, {
-                input: performanceInput(clip, images),
-              })
-            ).request_id;
+      const requestId = (await higgsfield(HF_VIDEO, hfVideoInput(clip, images, draft))).request_id;
       if (!requestId)
         throw new Error(
           "Submission needs reconciliation. Do not create a duplicate render.",
