@@ -21,7 +21,7 @@ const { VIDEO_CREDIT_EXHAUSTED } = await import('../lib/stream-plans.ts');
 const { seal, open, exportSecret, launchWalletsConfigured } = await import('../lib/launch-wallet.ts');
 const { buildFeeSharingSetup, feeShareholders, buildAcpCreate } = await import('../lib/acp-coin.ts');
 const { ACP_FREE_VIDEO_SECONDS, ACP_FEE_WALLET, ACP_PLATFORM_FEE_BPS, ACP_DEVELOPER_FEE_BPS, ACP_VIDEO_USD_PER_SECOND } = await import('../lib/acp-config.ts');
-const { Keypair } = await import('@solana/web3.js');
+const { Keypair, Connection } = await import('@solana/web3.js');
 const {fundedCreator,requirePaidGeneration}=await import('../lib/launchpad-media.ts');
 const {fulfillmentMicroUsd,providerBudgetMicroUsd}=await import('../lib/generation-billing.ts');
 const portraitRoute=await import('../app/api/launchpad/portrait/route.ts');
@@ -91,11 +91,30 @@ test('live SOL price is cached, bounded and never taken from a stale or absurd f
   const feed = (price, age = 5) => async () => { calls++; return Response.json({ parsed: [{ price: { price: String(price), expo: -8, publish_time: Math.floor(Date.now()/1000) - age } }] }); };
   try {
     delete process.env.ACP_SOL_USD_OVERRIDE;
+    process.env.PYTH_API_KEY='test-only';
     resetSolPriceCache(); globalThis.fetch = feed(15000000000); assert.equal(await solUsd(), 150); assert.equal(await solUsd(), 150); assert.equal(calls, 1);
     resetSolPriceCache(); globalThis.fetch = feed(15000000000, 600); await assert.rejects(solUsd(), /unavailable/);
     resetSolPriceCache(); globalThis.fetch = feed(100, 5); await assert.rejects(solUsd(), /unavailable/);
     resetSolPriceCache(); globalThis.fetch = async () => new Response('x', { status: 500 }); await assert.rejects(solUsd(), /unavailable/);
   } finally { globalThis.fetch = oldFetch; resetSolPriceCache(); restoreEnv(previous); }
+});
+
+test('Jupiter SOL quotes require authenticated access and a recent on-chain block time',async()=>{
+ const oldFetch=globalThis.fetch,oldTime=Connection.prototype.getBlockTime,previous={...process.env};let age=5,calls=0;
+ try{
+  delete process.env.PYTH_API_KEY;delete process.env.ACP_SOL_USD_OVERRIDE;
+  process.env.JUPITER_API_KEY='test-only';process.env.SOLANA_RPC_URL='https://rpc.example.invalid';
+  Connection.prototype.getBlockTime=async slot=>{calls++;assert.equal(slot,100);return Math.floor(Date.now()/1000)-age;};
+  globalThis.fetch=async(url,options)=>{
+   calls++;
+   if(String(url).startsWith('https://api.jup.ag/price/v3')){assert.equal(options.headers['x-api-key'],'test-only');return Response.json({So11111111111111111111111111111111111111112:{usdPrice:150,blockId:100}});}
+   const body=JSON.parse(options.body);assert.equal(body.method,'getBlockTime');
+   return Response.json({jsonrpc:'2.0',id:body.id,result:Math.floor(Date.now()/1000)-age});
+  };
+  resetSolPriceCache();assert.equal(await solUsd(),150);assert.equal(await solUsd(),150);assert.equal(calls,2);
+  age=600;resetSolPriceCache();await assert.rejects(solUsd(),/unavailable/);
+  age=-300;resetSolPriceCache();await assert.rejects(solUsd(),/unavailable/);
+ }finally{globalThis.fetch=oldFetch;Connection.prototype.getBlockTime=oldTime;resetSolPriceCache();restoreEnv(previous);}
 });
 test('launch wallet secrets are encrypted, bound to character and owner, and exportable', () => {
   const previous = {...process.env};

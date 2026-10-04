@@ -12,7 +12,7 @@ Generation requires payment before any portrait, AI script or video request. Edi
 
 ## Prices and spending controls
 
-`ACP_VIDEO_USD_PER_SECOND=0.20` gives $60/$120/$180/$240/$300 for 5/10/15/20/25 minutes. Pyth SOL/USD determines the SOL quote. Missing, stale, future-dated or implausible prices are rejected. Production ignores the development price override. Purchases require a valid maximum lamport amount and stable UUID; the UI permits at most 2% movement above its displayed quote. Network fees are additional.
+`ACP_VIDEO_USD_PER_SECOND=0.20` gives $60/$120/$180/$240/$300 for 5/10/15/20/25 minutes. Authenticated Jupiter SOL/USD determines the SOL quote, with its block time checked through Solana RPC. Authenticated Pyth is also supported when PYTH_API_KEY is configured. Missing, stale, future-dated or implausible prices are rejected. Production ignores the development price override. Purchases require a valid maximum lamport amount and stable UUID; the UI permits at most 2% movement above its displayed quote. Network fees are additional.
 
 `ACP_PUBLIC_GENERATION_ENABLED=false` keeps the `HER_LAUNCHPAD_CREATOR_WALLETS` pilot allowlist. Public activation also requires `ACP_STREAM_CREDITS_ENABLED=true` and a positive provider budget; it never bypasses paid allowances.
 
