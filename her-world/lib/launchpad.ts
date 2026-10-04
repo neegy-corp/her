@@ -112,6 +112,9 @@ export type LaunchStatus = {
   videos: boolean;
   coinCreation: boolean;
   broadcast: boolean;
+  broadcastMode?: "browser";
+  unattendedBroadcast?: boolean;
+  publicGeneration?: boolean;
   imageProvider?: "higgsfield" | "openai";
   message: string;
 };

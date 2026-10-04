@@ -460,7 +460,7 @@ function Studio({ id }: { id: string }) {
                   if (disposed || creditSession.current!==sessionId) return;
                   updateCredits(value);
                   if (value.sessionId!==sessionId || value.endsAt<=value.serverNow) {
-                    void stop();setError("Stream time ended. Burn ACP to add another session.");
+                    void stop();setError("Stream time ended. Purchase more time to start another session.");
                   }
                 }).catch(()=>{
                   if (!disposed && creditSession.current===sessionId) {void stop();setError("Could not verify remaining stream time. Check your saved credits before restarting.");}

@@ -203,6 +203,34 @@ test("disabled storage and unauthenticated jobs cannot invoke paid providers", a
   }
 });
 
+test("public paid access reports browser publishing without claiming unattended streaming", async () => {
+  const names=['HER_LAUNCHPAD_ENABLED','ACP_STREAM_CREDITS_ENABLED','ACP_PUBLIC_GENERATION_ENABLED','ACP_PROVIDER_BUDGET_USD'];
+  const previous=Object.fromEntries(names.map(name=>[name,process.env[name]]));
+  try {
+    Object.assign(process.env,{HER_LAUNCHPAD_ENABLED:'true',ACP_STREAM_CREDITS_ENABLED:'true',ACP_PUBLIC_GENERATION_ENABLED:'true',ACP_PROVIDER_BUDGET_USD:'200'});
+    const status=await (await route.GET(new Request('http://localhost/api/launchpad'))).json();
+    assert.equal(status.broadcast,true);assert.equal(status.broadcastMode,'browser');assert.equal(status.unattendedBroadcast,false);assert.equal(status.publicGeneration,true);
+    process.env.ACP_STREAM_CREDITS_ENABLED='false';
+    const paused=await (await route.GET(new Request('http://localhost/api/launchpad'))).json();
+    assert.equal(paused.broadcast,false);assert.equal(paused.publicGeneration,false);
+  } finally { for(const [key,value] of Object.entries(previous)) {if(value===undefined)delete process.env[key];else process.env[key]=value;} }
+});
+
+test("archived samples disappear from the public directory without removing other launches", async () => {
+  const oldFetch=globalThis.fetch,previous=process.env.DATABASE_URL,hidden=process.env.ACP_ARCHIVED_CHARACTER_IDS;
+  try {
+    process.env.DATABASE_URL='postgresql://her_web:test@example.com/postgres';process.env.ACP_ARCHIVED_CHARACTER_IDS='sample';
+    const mint=Keypair.generate().publicKey.toBase58();
+    globalThis.fetch=async()=>Response.json({results:[{results:[{id:'sample',mint,name:'Sample'},{id:'creator',mint,name:'Creator'}],meta:{changes:0}}]});
+    const data=await (await tokenRoute.GET(new Request('http://localhost/api/launchpad/tokens'))).json();
+    assert.deepEqual(data.tokens.map(row=>row.id),['creator']);
+  } finally {
+    globalThis.fetch=oldFetch;
+    if(previous===undefined)delete process.env.DATABASE_URL;else process.env.DATABASE_URL=previous;
+    if(hidden===undefined)delete process.env.ACP_ARCHIVED_CHARACTER_IDS;else process.env.ACP_ARCHIVED_CHARACTER_IDS=hidden;
+  }
+});
+
 test("coin art is independent from character identity and uses explicit roles", () => {
   const draft = newDraft();
   assert.equal(

@@ -2,6 +2,7 @@ import { withDatabase } from "@/lib/database";
 import { publicTokenRows } from "@/lib/launchpad-store";
 import { publicToken } from "@/lib/public-tokens";
 import { setting, json } from "@/lib/server";
+import { archivedCharacterIds } from "@/lib/character-visibility";
 export const runtime = "nodejs";
 export async function GET(req: Request) {
   const raw = new URL(req.url).searchParams.get("offset") || "0";
@@ -17,9 +18,10 @@ export async function GET(req: Request) {
   try {
     return await withDatabase(setting("DATABASE_URL"), async () => {
       const rows = await publicTokenRows(offset);
+      const archived = archivedCharacterIds();
       return json(
         {
-          tokens: rows.slice(0, 24).map(publicToken).filter(Boolean),
+          tokens: rows.slice(0, 24).filter(row => !archived.has(row.id)).map(publicToken).filter(Boolean),
           nextOffset: rows.length > 24 ? offset + 24 : null,
         },
         200,

@@ -46,6 +46,9 @@ import { launchWalletView, ensureLaunchWallet, afterLaunch } from "@/lib/launch-
 import { markWalletExported } from "@/lib/fee-funding-store";
 import { ACP_LAUNCH_MIN_LAMPORTS } from "@/lib/acp-config";
 import { fundedCreator as launchAccess } from "@/lib/launchpad-media";
+import { publicGenerationEnabled } from "@/lib/generation-billing";
+import { streamCreditsEnabled } from "@/lib/stream-credit-store";
+import { archivedCharacterIds } from "@/lib/character-visibility";
 
 export const runtime = "nodejs";
 export const maxDuration = 180;
@@ -70,11 +73,14 @@ function capabilities(): LaunchStatus {
       !!setting("BLOB_READ_WRITE_TOKEN") &&
       !!setting("SOLANA_RPC_URL") &&
       launchWalletsConfigured(),
-    // A configured camera is not evidence of a supported multi-tenant broadcaster.
-    broadcast: false,
+    // This is browser-to-Pump publishing. Availability is not a playback verification.
+    broadcast: storage && streamCreditsEnabled(),
+    broadcastMode: "browser",
+    unattendedBroadcast: false,
+    publicGeneration: storage && publicGenerationEnabled(),
     imageProvider: "higgsfield",
     message: storage
-      ? "Character drafts are open. Live launch services are being connected."
+      ? "Create a character, purchase generation, then open its studio to broadcast to Pump. Keep the studio tab open."
       : "Design and save locally. Cloud launch services are not activated yet.",
   };
 }
@@ -133,8 +139,10 @@ async function get(req: Request) {
   if (!capabilities().storage)
     return json({ error: "Cloud drafts are not activated yet." }, 503);
   const who = await owner(req);
-  if (action(req) === "drafts")
-    return json({ drafts: (await listDrafts(who)).map(publicRow) });
+  if (action(req) === "drafts") {
+    const archived = archivedCharacterIds();
+    return json({ drafts: (await listDrafts(who)).filter(row => !archived.has(row.id)).map(publicRow), archivedIds: [...archived] });
+  }
   if (action(req) === "face") {
     const id = new URL(req.url).searchParams.get("id") || "";
     const row = await ownedDraft(id, who);

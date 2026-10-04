@@ -16,7 +16,13 @@ The public application is now branded ACP. Existing HER database names, environm
 - The saved new-video limit caps additional paid requests, including ambiguous failures. A provider error pauses generation without stopping playback or automatically retrying a paid request. Once fresh content runs out, existing scenes replay with a visible replay label. This is continuity fallback, not fresh real-time video generation. Provider rendering is currently substantially slower than playback.
 - WHIP keys stay in tab memory. They are not stored in browser storage, backend drafts, URLs or logs. The studio reports transport byte/frame progress separately from public playback. It does not claim that an accepted WHIP request proves Pump playback.
 
-## Deployment state and outstanding gates
+## Public paid rollout — October 4, 2026
+
+Public paid generation is enabled following the owner's reported testing and activation request. Payment remains required before portrait, script or video submissions; the funded fulfillment ceiling and durable payment ledger remain enforced. No free grant is enabled. `ACP_ARCHIVED_CHARACTER_IDS` hides retired sample records from directory and creator listings without deleting their financial records or on-chain tokens.
+
+`broadcast: true` means browser-to-Pump publishing is available, with `broadcastMode: "browser"` and `unattendedBroadcast: false`. Creators enter their own coin's WHIP URL/key and click Go Live after preparing video and purchasing time. The studio sends video/audio automatically and manages prepared playback and generation. Keep the tab and device awake; there is no unattended cloud worker. Capability flags do not verify any individual public stream. The historical rollout notes below describe earlier tests, not current public-access settings.
+
+## Historical deployment state and outstanding gates
 
 Storage migration `20261003034000_acp_artwork.sql` and the updated allowlist gateway were applied to the existing Supabase project. The fixture records used for gateway verification were removed.
 

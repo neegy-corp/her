@@ -20,23 +20,24 @@ function Dashboard() {
   const [local, setLocal] = useState<CharacterDraft[]>([]), [remote, setRemote] = useState<OwnedCharacter[]>([]);
   const [loading, setLoading] = useState(false), [error, setError] = useState("");
   const [status, setStatus] = useState<LaunchStatus | null>(null), [revision, setRevision] = useState(0);
+  const [archivedIds, setArchivedIds] = useState<string[]>([]);
   useEffect(() => {
     setLocal(readLocalDrafts(localStorage.getItem(DRAFT_STORE)));
     void fetch("/api/launchpad").then(r => r.ok ? r.json() as Promise<LaunchStatus> : Promise.reject()).then(setStatus).catch(() => setStatus(null));
   }, []);
   useEffect(() => {
     let cancelled = false;
-    setRemote([]); setError("");
+    setRemote([]); setArchivedIds([]); setError("");
     if (!viewer.wallet) { setLoading(false); return; }
     setLoading(true);
     void fetch("/api/launchpad?action=drafts", { cache: "no-store" }).then(async r => {
-      const result = await r.json() as { drafts: OwnedCharacter[]; error?: string };
+      const result = await r.json() as { drafts: OwnedCharacter[]; archivedIds?: string[]; error?: string };
       if (!r.ok) throw new Error(result.error || "Could not load your wallet's characters.");
-      if (!cancelled) setRemote(result.drafts);
+      if (!cancelled) { setRemote(result.drafts); setArchivedIds(result.archivedIds || []); }
     }).catch(e => { if (!cancelled) setError(e.message); }).finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
   }, [viewer.wallet, revision]);
-  const localOnly = local.filter(d => !remote.some(r => r.id === d.id));
+  const localOnly = local.filter(d => !archivedIds.includes(d.id) && !remote.some(r => r.id === d.id));
   function stash(d: CharacterDraft) {
     // Keep newer unsaved device edits; never overwrite them with an older cloud draft.
     const current = readLocalDrafts(localStorage.getItem(DRAFT_STORE));
@@ -69,7 +70,7 @@ function Dashboard() {
   return <main className="lp acp-pages"><AcpNav active="developer" /><section className="acp-directory">
     <div className="acp-directory-heading acp-art-heading acp-studio-heading"><img className="acp-heading-art" src="/images/acp-v2/studio.webp" alt="" /><div><h1>Your characters.<br /><em>Your creative control.</em></h1><p>Pick up a draft, prepare your next launch, or open a character’s broadcast studio.</p></div><Button asChild><Link href="/create">New character <ArrowUpRight size={14} aria-hidden="true" /></Link></Button></div>
     <div className="acp-dev-account"><div><strong>{viewer.wallet ? shortWallet(viewer.wallet) : "Connect your creator wallet"}</strong><p>{viewer.wallet ? "Only characters owned by this verified wallet appear below." : "Wallet sign-in unlocks your saved characters across devices. No email signup."}</p></div><Button variant="outline" onClick={() => viewer.wallet ? void disconnect() : connect()}>{viewer.wallet ? "Disconnect" : "Connect wallet"}</Button>{viewer.wallet && <Button variant="ghost" disabled={loading} onClick={() => setRevision(r => r + 1)}>Refresh</Button>}</div>
-    <div className="acp-dev-services"><span>Cloud drafts <b>{status ? status.storage ? "Connected" : "Offline" : "Checking"}</b></span><span>Pump creation <b>{status ? status.coinCreation ? "Enabled" : "Not activated" : "Checking"}</b></span><span>Portrait generation <b>{status ? status.generation ? "Enabled" : "Awaiting provider" : "Checking"}</b></span><span>Broadcast <b>Per-character studio</b></span></div>
+    <div className="acp-dev-services"><span>Cloud drafts <b>{status ? status.storage ? "Connected" : "Offline" : "Checking"}</b></span><span>Pump creation <b>{status ? status.coinCreation ? "Enabled" : "Not activated" : "Checking"}</b></span><span>Portrait generation <b>{status ? status.generation ? "Enabled" : "Awaiting provider" : "Checking"}</b></span><span>Pump broadcast <b>{status ? status.broadcast ? "Enabled · keep studio open" : "Not activated" : "Checking"}</b></span></div>
     {error && <p role="alert" className="lp-inline">{error}</p>}
     {loading && <p role="status">Loading your wallet's characters…</p>}
     {!loading && !localOnly.length && !remote.length && !error && <div className="studio-empty"><div className="studio-empty-symbol" aria-hidden="true"><Plus size={36} strokeWidth={1.5} /></div><div><h2>Make your first main character.</h2><p>Start with a name and a point of view. Your draft saves on this device as you work; connect a wallet to save it across devices when cloud storage is available.</p><Button asChild><Link href="/create">Open the character builder <ArrowUpRight size={14} aria-hidden="true" /></Link></Button></div></div>}
