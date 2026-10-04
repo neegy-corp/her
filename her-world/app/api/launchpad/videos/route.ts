@@ -4,7 +4,6 @@ import {
   ownedDraft,
   assets,
   renders,
-  claimRender,
   updateRender,
   takeQuota,
 } from "@/lib/launchpad-store";
@@ -13,6 +12,7 @@ import { clipSchema } from "@/lib/show";
 import {
   digest,
   fundedCreator,
+  requirePaidGeneration,
   falClient,
   KLING,
   tavusVideo,
@@ -142,6 +142,7 @@ async function handle(req: Request) {
           503,
         );
       fundedCreator(who);
+      requirePaidGeneration();
       const parsed = mediaDraftSchema.safeParse(JSON.parse(row.document));
       if (!parsed.success) throw new Error("Add a character name and check the creative prompts before generating video. A coin ticker is not needed yet.");
       const draft = parsed.data;
@@ -191,7 +192,7 @@ async function handle(req: Request) {
         video_url: null,
         created_at: Date.now(),
       };
-      if (!(await (streamCreditsEnabled() ? claimCreditRender(render,clip.duration) : claimRender(render)))) {
+      if (!(await claimCreditRender(render,clip.duration))) {
         // A concurrent request may have claimed this exact scene. Return its job,
         // never convert an existing paid attempt into a retryable credit error.
         const claimed = (await renders(id,who)).find(r=>r.clip_id===clip.id && r.fingerprint===fingerprint);

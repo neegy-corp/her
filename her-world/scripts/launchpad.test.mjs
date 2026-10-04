@@ -55,12 +55,9 @@ const { validateWhipEndpoint } = await import("../lib/whip-publisher.ts");
 const { normalizeChat } = await import("../lib/pump-chat.ts");
 const { scriptToClip, scriptMessages } = await import("../lib/acp-script.ts");
 const { generateScene } = await import("../lib/script-provider.ts");
-const { assertPairSupport, buildAcpCreate } =
-  await import("../lib/acp-coin.ts");
-const { ACP_QUOTE_MINT, ACP_FEE_WALLET, assetPurpose } =
+const { assetPurpose } =
   await import("../lib/acp-config.ts");
 const { Keypair, PublicKey, Transaction } = await import("@solana/web3.js");
-const { TOKEN_2022_PROGRAM_ID } = await import("@solana/spl-token");
 test("Pump SDK loads without Node's experimental CommonJS-to-ESM bridge", () => {
   const result = execFileSync(
     process.execPath,
@@ -230,58 +227,6 @@ test("all four character photos reach Kling and Element1 is referenced", () => {
   assert.throws(() =>
     performanceInput(defaultShow().clips[1], [...photos, photos[0]]),
   );
-});
-test("NVDAX and 100 bps fail closed if live Pump configuration changes", () => {
-  const global = {
-    creatorFeeConfigurable: true,
-    maxConfigurableCreatorFeeBps: 300n,
-  };
-  const quote = { source: "quoteControl", mint: new PublicKey(ACP_QUOTE_MINT) };
-  assert.doesNotThrow(() => assertPairSupport(global, quote));
-  assert.throws(() =>
-    assertPairSupport({ ...global, creatorFeeConfigurable: false }, quote),
-  );
-  assert.throws(() =>
-    assertPairSupport({ ...global, maxConfigurableCreatorFeeBps: 99n }, quote),
-  );
-  assert.throws(() =>
-    assertPairSupport(global, { ...quote, source: "global" }),
-  );
-  assert.throws(() =>
-    assertPairSupport(global, { ...quote, mint: Keypair.generate().publicKey }),
-  );
-});
-test("real SDK encodes NVDAX Token-2022, exact platform recipient and 1% fee", async () => {
-  const mint = Keypair.generate(),
-    user = Keypair.generate();
-  const instruction = await buildAcpCreate({
-    mint: mint.publicKey,
-    user: user.publicKey,
-    name: "ACP fixture",
-    symbol: "ACPT",
-    uri: "https://example.com/metadata.json",
-    quoteTokenProgram: TOKEN_2022_PROGRAM_ID,
-  });
-  const { PumpSdk } = createRequire(import.meta.url)("@pump-fun/pump-sdk");
-  const decoded = new PumpSdk().offlinePumpProgram.coder.instruction.decode(
-    instruction.data,
-  );
-  assert.equal(decoded.name, "createV2");
-  assert.equal(decoded.data.creator.toBase58(), ACP_FEE_WALLET);
-  assert.equal(decoded.data.creatorFeeBps[0].toString(), "100");
-  assert.equal(decoded.data.isHolderReward[0], false);
-  assert.ok(
-    instruction.keys.some((a) => a.pubkey.toBase58() === ACP_QUOTE_MINT),
-  );
-  assert.ok(
-    instruction.keys.some((a) => a.pubkey.equals(TOKEN_2022_PROGRAM_ID)),
-  );
-  const tx = new Transaction({
-    feePayer: user.publicKey,
-    recentBlockhash: Keypair.generate().publicKey.toBase58(),
-  }).add(instruction);
-  tx.partialSign(mint);
-  assert.ok(tx.serialize({ requireAllSignatures: false }).length <= 1232);
 });
 test("AI script output is bounded and cannot smuggle additional executable fields", () => {
   const scene = {

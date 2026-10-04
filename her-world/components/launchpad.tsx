@@ -43,7 +43,7 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import CharacterReferences from "./character-references";
-import { ACP_FEE_WALLET, ACP_QUOTE_MINT } from "@/lib/acp-config";
+import LaunchWalletPanel from "./launch-wallet-panel";
 import { DRAFT_STORE, creatorPath, readLocalDrafts, keepDraft, type CreatorStep } from "@/lib/creator-navigation";
 
 import { saveStudioDraft } from "@/lib/creator-workflow";
@@ -85,7 +85,7 @@ export default function Launchpad(props: EditorProps) {
   );
 }
 function Home({ characterId, initialStep = "character" }: EditorProps) {
-  const { viewer, connect, signTransaction, disconnect } = useWallet();
+  const { viewer, connect, disconnect } = useWallet();
   const [draft, setDraft] = useState<CharacterDraft | null>(null),
     [saved, setSaved] = useState<CharacterDraft[]>([]),
     [step] = useState<Step>(initialStep);
@@ -208,6 +208,14 @@ function Home({ characterId, initialStep = "character" }: EditorProps) {
       setNotice("Saved to your wallet.");
     });
   }
+  async function openCredits() {
+    if (!draft) return;
+    if (!viewer.wallet) { connect(); return; }
+    await task("Saving", async () => {
+      await request("save", {draft});
+      window.location.assign(`/credits/${encodeURIComponent(draft.id)}`);
+    });
+  }
   async function generate() {
     if (!draft) return;
     if (!viewer.wallet) {
@@ -286,13 +294,8 @@ function Home({ characterId, initialStep = "character" }: EditorProps) {
   }
   async function launch() {
     if (!draft || !review) return;
-    await task("Waiting for wallet", async () => {
-      const signedTransaction = await signTransaction(
-        review.unsignedTransaction,
-      );
-      setCoin(
-        await request("confirm-coin", { id: draft.id, signedTransaction }),
-      );
+    await task("Launching", async () => {
+      setCoin(await request("confirm-coin", { id: draft.id }));
       setReview(null);
       setNotice("Submitted. Check confirmation before making another launch.");
     });
@@ -386,6 +389,8 @@ function Home({ characterId, initialStep = "character" }: EditorProps) {
                     />
                     <div className="lp-check"><Checkbox id="character-rights" checked={draft.rightsConfirmed} onCheckedChange={checked => edit({rightsConfirmed: checked === true})} /><Label htmlFor="character-rights">I own this character or have permission to use their likeness.</Label></div>
                     <CharacterReferences draft={draft} onChange={edit} />
+                    <Button variant="outline" disabled={!!busy || !status.storage} onClick={() => void openCredits()}>Buy generation time</Button>
+                    <p className="lp-field-note">Payment is required before portraits, AI scripts and videos are generated.</p>
                     <Button
                       className="lp-primary lp-wide"
                       disabled={
@@ -467,22 +472,7 @@ function Home({ characterId, initialStep = "character" }: EditorProps) {
                         prefix="$"
                       />
 <CoinArtwork draft={draft} onChange={edit} servicesAvailable={!!viewer.wallet && status.storage} /></div>
-                    <div className="lp-pair-info">
-                      <strong>NVDAX pair · 1% ACP creator fee</strong>
-                      <p>
-                        Trades use NVIDIA xStock (NVDAX). The 1% creator fee
-                        accrues to ACP’s Pump creator vault in NVDAX; Pump
-                        protocol fees are additional. The platform wallet claims
-                        the accrued fees.
-                      </p>
-                      <a
-                        href="https://pump.fun/docs/custom-pairs"
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        Pair eligibility and issuer terms <ArrowUpRight size={14} aria-hidden="true" />
-                      </a>
-                    </div>
+                    <LaunchWalletPanel id={draft.id} ready={!!viewer.wallet && status.storage} />
                     <ol className="lp-launch-checklist">
                       <LaunchStep
                         number="01"
@@ -498,7 +488,7 @@ function Home({ characterId, initialStep = "character" }: EditorProps) {
                       <LaunchStep
                         number="03"
                         title="Create the coin on pump.fun"
-                        text="NVDAX pair. Review the 1% creator fee and approve in your wallet. No initial buy."
+                        text="Standard SOL coin launched from your launch wallet. Fees split 50% ACP, 50% your launch wallet. No initial buy."
                         status={
                           coin.status === "confirmed"
                             ? "Created"
@@ -628,23 +618,22 @@ function Home({ characterId, initialStep = "character" }: EditorProps) {
         <span className="lp-kicker">SOLANA MAINNET / TRANSACTION REVIEW</span>
         <h2 id="review-title">Create ${draft?.symbol}?</h2>
         <p>
-          This creates a real pump.fun coin for {draft?.name}. Your wallet pays
-          network and account-creation costs. There is no initial buy and no
-          automatic livestream.
+          This creates a real pump.fun coin for {draft?.name}. The character’s
+          launch wallet pays network and account-creation costs from the SOL you
+          deposited. There is no initial buy and no automatic livestream.
         </p>
         <dl>
           <dt>Mint address</dt>
           <dd>{review?.mint}</dd>
-          <dt>Creator wallet</dt>
-          <dd>{ACP_FEE_WALLET}</dd>
-          <dt>Launch payer</dt>
-          <dd>{viewer.wallet}</dd>
-          <dt>Quote asset — NVDAX</dt>
-          <dd>{ACP_QUOTE_MINT}</dd>
-          <dt>ACP creator fee</dt>
+          <dt>Creator (launch wallet)</dt>
+          <dd>This character’s launch wallet (address shown on the launch step)</dd>
+          <dt>Quote asset</dt>
+          <dd>SOL</dd>
+          <dt>Creator fees</dt>
           <dd>
-            1% in NVDAX, accrued to the platform creator vault. Pump protocol
-            fees are additional.
+            Paid in SOL. Split permanently 50% to ACP and 50% to this character’s launch
+            wallet, which you can export and which pays for your video time. Pump
+            protocol fees are additional.
           </dd>
         </dl>
         <label className="lp-check">
@@ -654,8 +643,8 @@ function Home({ characterId, initialStep = "character" }: EditorProps) {
             onChange={(e) => setConfirm(e.target.checked)}
           />
           <span>
-            I reviewed this coin, am eligible under the linked NVDAX issuer
-            terms, and understand the transaction is permanent.
+            I reviewed this coin and understand the launch and the 50/50 fee split
+            are permanent.
           </span>
         </label>
         <Button
@@ -663,7 +652,7 @@ function Home({ characterId, initialStep = "character" }: EditorProps) {
           disabled={!confirm || !!busy}
           onClick={() => void launch()}
         >
-          Approve in wallet <ArrowUpRight size={17} />
+          Launch coin <ArrowUpRight size={17} />
         </Button>
       </dialog>
     </main>

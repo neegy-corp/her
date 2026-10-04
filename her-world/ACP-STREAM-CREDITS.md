@@ -1,34 +1,42 @@
-# ACP stream-time credits
+# Paid generation and creator-fee funding
 
-The developer wallet burns the **shared main ACP token**, never the character coin. Pricing:
+Generation requires payment before any portrait, AI script or video request. Editing drafts and writing scripts manually remain free. No automatic free grant is issued when a coin launches.
 
-| Wall-clock stream time | ACP burned | Requested video allowance |
-| --- | ---: | ---: |
-| 15 minutes | 50,000 | 900 seconds |
-| 30 minutes | 100,000 | 1,800 seconds |
-| 45 minutes | 150,000 | 2,700 seconds |
-| 1 hour | 200,000 | 3,600 seconds |
+## Customer flow
 
-The main mint has not been supplied. Purchases require both the exact `ACP_CREDIT_MINT` and `ACP_STREAM_CREDITS_ENABLED=true`. Default: disabled. Do not substitute the pilot character token, the old HER coin, or a guessed mint. These settings are server-only and require a new deployment.
+1. Save a character and open **Buy generation time**. `/credits/[id]` shows its custodial launch wallet and available packages. Its AES-256-GCM key is bound to character and owner; only the authenticated owner can export it.
+2. Deposit SOL. A deposit alone does not purchase credits. Select 5, 10, 15, 20 or 25 minutes to authorize payment to `5psWWm8BAjWBGt54jSn8DgCrQEDnq8FurqbaTAuaCqyi`. Payment works before launching a coin.
+3. Each minute grants 60 video seconds, 60 stream seconds, one portrait and 20 AI script requests. Provider requests reserve their allowance before submission. Unknown submissions retain it until reviewed. Checking a saved portrait/video job never resubmits it.
+4. Launch a standard SOL-quoted Pump coin from the character wallet with no initial buy. Minimum launch deposit: 0.05 SOL, separate from generation. Locked creator-fee split: 50% ACP and 50% character wallet. This is a share of Pump's creator fees, not a 50% trading tax. Historical coins keep their original settings.
+5. Collect accrued fees or deposit SOL, then purchase more time. Purchases are explicit; there is no automatic renewal. Publishing starts the stream clock; stopping saves unused time.
 
-## Receipt and accounting rules
+## Prices and spending controls
 
-- Signed wallet sessions and character ownership are required for every endpoint. The developer must hold enough main ACP in the standard associated token account and SOL for network fees.
-- Review fixes the exact mint, amount, character and unique memo. The wallet signs a BurnChecked transaction. The server accepts only that exact reviewed message, persists its signature before submission, and credits only a successfully finalized, matching receipt.
-- Receipt replay cannot award credits twice. Submitted receipts are retained after uncertain RPC responses. Verify the existing receipt rather than making another burn. Unconfirmed/failed submissions require reconciliation before a new purchase; there is no automatic paid retry or assumption that a timeout means failure.
-- Credits belong to one character and its developer. The database atomically claims each render and debits its requested duration. Concurrent renders cannot overdraw. Provider errors and unknown submissions retain the debit pending review, preventing free duplicate jobs.
-- Video preparation uses the video allowance without starting the stream clock. Publishing starts the server timestamp after WHIP accepts the connection. Retrying the same session does not reset the deadline. An active purchase extends its deadline.
-- Normal Stop returns whole unused seconds. Closing/crashing the browser may prevent that request; the clock continues until stopped or expired. Use **End paid session and save remaining time** to recover an abandoned session. No credit refund creates tokens; on-chain burns are permanent.
-- The studio stops at expiration, checking the server first for a recent extension. Ending a session from another tab is observed on its next 15-second credit poll.
+`ACP_VIDEO_USD_PER_SECOND=0.20` gives $60/$120/$180/$240/$300 for 5/10/15/20/25 minutes. Pyth SOL/USD determines the SOL quote. Missing, stale, future-dated or implausible prices are rejected. Production ignores the development price override. Purchases require a valid maximum lamport amount and stable UUID; the UI permits at most 2% movement above its displayed quote. Network fees are additional.
 
-## Operational limits and activation
+`ACP_PUBLIC_GENERATION_ENABLED=false` keeps the `HER_LAUNCHPAD_CREATOR_WALLETS` pilot allowlist. Public activation also requires `ACP_STREAM_CREDITS_ENABLED=true` and a positive provider budget; it never bypasses paid allowances.
 
-This is supervised browser broadcasting. Keep the studio tab open and computer awake. The timer controls ACP's browser publisher and backend generation; it cannot control an unrelated OBS broadcast using the same stream key. A fleet of hosted broadcast workers is not implemented.
+`ACP_PROVIDER_BUDGET_USD` is a **lifetime funded fulfillment ceiling**, not a daily reset. SQL atomically reserves $10.70 per purchased minute: conservative $0.17/video second, $0.10/portrait and $0.02/script. Only packages fitting remaining capacity are offered. Failed/expired payments release capacity once; successful payments keep it reserved, including after consumption. Increase this ceiling only after actual provider top-ups. Never zero the reservation ledger. SOL revenue does not automatically refill Higgsfield or the script provider.
 
-The video allowance caps **requested generation seconds**, not a promise of continuously new footage. Existing scenes replay while providers render. The continuous studio still requires its verified five- or ten-minute prepared buffer. Video generation can take minutes, incur provider charges, or fail. Provider funding and the existing funded-creator allowlist remain required. Burns do not pay Higgsfield/Anthropic bills. When credits are enabled, per-wallet daily request limits are 500 videos and 600 scripts in addition to the actual credit balance.
+Higgsfield's model page on October 4 listed Kling O3 Image Reference at $0.084/second before a temporary account discount. The reserve leaves room for audio/model price differences and image/script requests. Recheck actual billed costs before changing models or prices. Reference: https://open.higgsfield.ai/models/kling-video/o3/image-reference/playground
 
-Before enabling sales: supply/verify the main ACP mint and its token program/decimals, verify funded provider access, complete a wallet-reviewed receipt test, verify public Pump playback, stream expiry/recovery and concurrent characters. No real ACP burn or public timed broadcast was tested while the mint was unavailable.
+## Financial durability
 
-Apply the stream-credit migration and deploy the generated `her-database` allowlist before enabling. Tables live in `her_private`; only `her_web` has access, with RLS as defense in depth. Anonymous and authenticated Supabase clients have no table privileges. Existing gateway custom authentication remains mandatory.
+- One pending payment per character and a permanent unique request ID prevent concurrent charges and replay.
+- Persist signature, validity height and capacity reservation before sending. A clock timeout never expires a transaction.
+- Reconcile history and finalized block height. RPC failures remain unknown; do not resubmit as a new payment.
+- Payment and allowances are credited in one SQL statement. Polling only reconciles saved signatures.
+- Fee setup and collection persist claims before sending; unknown collection is pending, not empty.
+- Owner-scoped queries, authenticated mutation guards and private RLS protect records. Secrets never enter public assets.
 
-Validation: `node --experimental-transform-types --test scripts/stream-credits.test.mjs scripts/launchpad.test.mjs scripts/burn-validation.test.mjs scripts/burn-amount.test.mjs`. The deployed gateway was additionally checked with isolated disposable database fixtures for duplicate receipts, ownership, session retry/conflict, stop refunds, active extensions, concurrent debit, and render replay. These checks never submit chain transactions or call paid media providers.
+## Deployment and verification
+
+Apply `20261004230000_acp_fee_funded_video.sql` then `20261004233000_acp_paid_generation.sql`; regenerate/deploy the `her-database` allowlist. Preserve custom server authentication and existing credentials. Back up the 32-byte base64 `ACP_LAUNCH_WALLET_KEY`, stored as Sensitive Production. Never replace an existing key without a wallet migration.
+
+The migration and gateway have been exercised on the real project with disposable unfunded fixtures. Tests cover purchase races, owner isolation, request replay, exactly-once credits, generation overdrafts and session refunds. `scripts/fee-funding-integration.mjs` requires disposable fixture records and the actual gateway credential; it sends no chain transactions.
+
+Before opening publicly, verify a real checkout, the current SOL coin launch, locked split and fee collection. Synthetic tests do not prove chain operations or public streaming. Keep the public flag off until these checks and provider funding pass. The historical NVDAX coin does not verify the new SOL/custodial flow.
+
+## Operational limits
+
+Provider top-ups are manual. Maintain Higgsfield and script balances separately. Video generation takes minutes. This change does not obtain Pump stream credentials or prove simultaneous public streams. Preserve stopped broadcasts unless explicitly instructed to start them.

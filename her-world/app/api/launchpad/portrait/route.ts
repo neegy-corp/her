@@ -1,8 +1,9 @@
 import { withDatabase } from "@/lib/database";
 import { json, mutationGuard, setting, wallet } from "@/lib/server";
-import { ownedDraft, assets, renders, claimRender, updateRender, saveImage, takeQuota } from "@/lib/launchpad-store";
+import { ownedDraft, assets, renders, updateRender, saveImage, takeQuota } from "@/lib/launchpad-store";
 import { localDraftSchema, visualFingerprint, referenceFingerprint } from "@/lib/launchpad";
-import { fundedCreator, digest } from "@/lib/launchpad-media";
+import { fundedCreator, digest, requirePaidGeneration } from "@/lib/launchpad-media";
+import { claimPortrait } from "@/lib/stream-credit-store";
 import { HF_PORTRAIT, HF_REFERENCE_PORTRAIT, PORTRAIT_CLIP, higgsfield, hfPortraitInput, hfReferencePortraitInput, persistHfMedia } from "@/lib/higgsfield";
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -24,11 +25,16 @@ async function handle(req: Request) {
     if (req.method === "POST" && !job) {
       if (setting("HER_LAUNCHPAD_GENERATION_ENABLED") !== "true" || !setting("HF_API_KEY") || !setting("BLOB_READ_WRITE_TOKEN")) return json({ error: "Higgsfield portrait credits are not connected. No generation was submitted." }, 503);
       fundedCreator(who);
+      requirePaidGeneration();
       if (draft.appearance.trim().length < 20 && !refs.length) throw new Error("Describe the character or upload reference images first.");
       if (!draft.rightsConfirmed || row.face_status !== "draft" || row.mint) throw new Error("Confirm image rights; a launched or trained character's image cannot change.");
       await takeQuota(`image:${who}`, 5);
       job = { id: crypto.randomUUID(), character_id: id, wallet: who, clip_id: PORTRAIT_CLIP, fingerprint, provider: "higgsfield", provider_id: null, status: "submitting", video_url: null, created_at: Date.now() };
-      if (!(await claimRender(job))) return json({ status: "submitting" });
+      if (!(await claimPortrait(job))) {
+        const prior = (await renders(id, who)).find(r => r.clip_id === PORTRAIT_CLIP && r.fingerprint === fingerprint);
+        if (prior) return json({ status: prior.status });
+        return json({ error: "Buy generation time first; no portrait allowance remains." }, 402);
+      }
       const submitted = await higgsfield(model, refs.length ? hfReferencePortraitInput(draft,refs) : hfPortraitInput(draft));
       if (!submitted.request_id) throw new Error("Submission needs reconciliation. Do not submit another portrait.");
       await updateRender(job.id, who, submitted.request_id, "queued", null);

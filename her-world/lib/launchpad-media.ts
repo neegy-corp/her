@@ -3,6 +3,7 @@ import { createFalClient } from "@fal-ai/client";
 import { setting } from "./server";
 import type { ShowClip } from "./show";
 import { REFERENCE_LIMIT } from "./acp-config";
+import { publicGenerationEnabled } from "./generation-billing";
 export const KLING = "fal-ai/kling-video/v3/pro/image-to-video";
 export const falClient = () =>
   createFalClient({ credentials: setting("FAL_KEY") });
@@ -26,6 +27,7 @@ export function imageType(bytes: Uint8Array) {
   return null;
 }
 export function fundedCreator(owner: string) {
+  if (publicGenerationEnabled()) return;
   if (
     !setting("HER_LAUNCHPAD_CREATOR_WALLETS")
       .split(",")
@@ -35,6 +37,10 @@ export function fundedCreator(owner: string) {
     throw new Error(
       "Generation credits are not active for this wallet. Your draft is preserved.",
     );
+}
+export function requirePaidGeneration() {
+  if (setting("ACP_STREAM_CREDITS_ENABLED") !== "true")
+    throw new Error("Paid generation is not active yet. Your draft is preserved.");
 }
 export async function tavusVideo(path: string, body?: unknown) {
   const r = await fetch(`https://tavusapi.com/v2/videos${path}`, {

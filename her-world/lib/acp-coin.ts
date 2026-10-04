@@ -1,99 +1,123 @@
 import { createRequire } from "node:module";
-import { PublicKey, type Connection } from "@solana/web3.js";
+import { PublicKey, type Connection, type TransactionInstruction } from "@solana/web3.js";
+import { NATIVE_MINT, TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import {
-  ACP_QUOTE_MINT,
   ACP_FEE_WALLET,
-  ACP_CREATOR_FEE_BPS,
+  ACP_PLATFORM_FEE_BPS,
+  ACP_DEVELOPER_FEE_BPS,
 } from "./acp-config";
 // Keep optional coin-provider loading out of draft/status requests.
 const pumpSdk = () =>
   createRequire(import.meta.url)(
     "@pump-fun/pump-sdk",
   ) as typeof import("@pump-fun/pump-sdk");
-type FeeBN = NonNullable<
-  Parameters<
-    import("@pump-fun/pump-sdk").PumpSdk["createV2Instruction"]
-  >[0]["creatorFeeBps"]
->;
 export const acpCoinTerms = {
-  quoteSymbol: "NVDAX",
-  quoteMint: ACP_QUOTE_MINT,
-  creatorFeeBps: ACP_CREATOR_FEE_BPS,
-  feeRecipient: ACP_FEE_WALLET,
+  quoteSymbol: "SOL",
+  feeCurrency: "SOL",
+  platformBps: ACP_PLATFORM_FEE_BPS,
+  developerBps: ACP_DEVELOPER_FEE_BPS,
+  platformWallet: ACP_FEE_WALLET,
   initialBuy: 0,
-  feeCurrency: "NVDAX",
   protocolFeesAdditional: true,
 };
-export function assertPairSupport(
-  global: {
-    creatorFeeConfigurable: boolean;
-    maxConfigurableCreatorFeeBps: { toString(): string };
-  },
-  quote: { source: string; mint: PublicKey },
-) {
-  if (
-    !quote.mint.equals(new PublicKey(ACP_QUOTE_MINT)) ||
-    quote.source !== "quoteControl"
-  )
-    throw new Error(
-      "Pump does not currently support the required NVDAX custom pair.",
-    );
-  if (
-    !global.creatorFeeConfigurable ||
-    BigInt(global.maxConfigurableCreatorFeeBps.toString()) <
-      BigInt(ACP_CREATOR_FEE_BPS)
-  )
-    throw new Error(
-      "Pump does not currently allow the configured 1% ACP creator fee.",
-    );
-}
-export async function checkAcpPair(rpc: Connection) {
-  const { OnlinePumpSdk } = pumpSdk();
-  const sdk = new OnlinePumpSdk(rpc);
-  const [global, quote] = await Promise.all([
-    sdk.fetchGlobal(),
-    sdk.resolveQuoteMint(new PublicKey(ACP_QUOTE_MINT)),
-  ]);
-  assertPairSupport(global, quote);
-  return quote;
-}
+/** Standard SOL-quoted coin whose creator is the character's launch wallet. */
 export async function buildAcpCreate(args: {
   mint: PublicKey;
-  user: PublicKey;
+  creator: PublicKey;
   name: string;
   symbol: string;
   uri: string;
-  quoteTokenProgram: PublicKey;
 }) {
   if (Buffer.byteLength(args.name, "utf8") > 32 || args.uri.length > 200)
     throw new Error("Coin name or metadata URL exceeds Pump's limit.");
   const { PumpSdk } = pumpSdk();
-  const BN = createRequire(import.meta.url)("bn.js") as new (
-    value: number,
-  ) => FeeBN;
   return new PumpSdk().createV2Instruction({
-    ...args,
-    creator: new PublicKey(ACP_FEE_WALLET),
-    quoteMint: new PublicKey(ACP_QUOTE_MINT),
-    creatorFeeBps: new BN(ACP_CREATOR_FEE_BPS),
+    mint: args.mint,
+    name: args.name,
+    symbol: args.symbol,
+    uri: args.uri,
+    creator: args.creator,
+    user: args.creator,
     mayhemMode: false,
     cashback: false,
     holderReward: false,
   });
 }
-export async function verifyAcpCoin(rpc: Connection, mint: string) {
-  const { OnlinePumpSdk } = pumpSdk();
-  const curve = await new OnlinePumpSdk(rpc).fetchBondingCurve(
-    new PublicKey(mint),
-  );
+/** The launch wallet must still be the creator and the coin must be SOL-quoted. */
+export async function verifyAcpCoin(rpc: Connection, mint: string, launchWallet: string) {
+  const { OnlinePumpSdk, feeSharingConfigPda, normalizeQuoteMint } = pumpSdk();
+  const mintKey = new PublicKey(mint);
+  const curve = await new OnlinePumpSdk(rpc).fetchBondingCurve(mintKey);
+  const creators = [new PublicKey(launchWallet), feeSharingConfigPda(mintKey)];
   if (
-    !curve.quoteMint.equals(new PublicKey(ACP_QUOTE_MINT)) ||
-    !curve.creator.equals(new PublicKey(ACP_FEE_WALLET)) ||
-    Number(curve.creatorFeeBps.toString()) !== ACP_CREATOR_FEE_BPS ||
-    curve.isHolderReward
+    !normalizeQuoteMint(curve.quoteMint).equals(NATIVE_MINT) ||
+    !creators.some((c) => curve.creator.equals(c)) ||
+    curve.isHolderReward ||
+    curve.isCashbackCoin
   )
     throw new Error(
-      "The confirmed coin does not match the reviewed ACP pair and fee settings.",
+      "The confirmed coin does not match the reviewed SOL launch settings.",
     );
   return true;
+}
+/** 50% to ACP's fee wallet, 50% to the launch wallet that holds the developer's share. */
+export function feeShareholders(launchWallet: string) {
+  const platform = new PublicKey(ACP_FEE_WALLET),
+    launch = new PublicKey(launchWallet);
+  if (platform.equals(launch))
+    throw new Error("The launch wallet must differ from the ACP fee wallet.");
+  return [
+    { address: platform, shareBps: ACP_PLATFORM_FEE_BPS },
+    { address: launch, shareBps: ACP_DEVELOPER_FEE_BPS },
+  ];
+}
+/**
+ * One-time, permanent split. Signed by the launch wallet (the coin's creator).
+ * `update_fee_shares_v2` revokes the admin, so the split can never be edited again.
+ */
+export async function buildFeeSharingSetup(args: {
+  mint: PublicKey;
+  launchWallet: PublicKey;
+}): Promise<TransactionInstruction[]> {
+  const { PUMP_SDK } = pumpSdk();
+  const shares = feeShareholders(args.launchWallet.toBase58());
+  return [
+    await PUMP_SDK.createFeeSharingConfig({
+      creator: args.launchWallet,
+      mint: args.mint,
+      pool: null,
+    }),
+    await PUMP_SDK.updateFeeSharesV2({
+      authority: args.launchWallet,
+      mint: args.mint,
+      currentShareholders: [args.launchWallet],
+      newShareholders: shares,
+      quoteMint: NATIVE_MINT,
+      quoteTokenProgram: TOKEN_PROGRAM_ID,
+    }),
+  ];
+}
+/** Reads the sharing config on chain and confirms the locked 50/50 split. */
+export async function verifyFeeSharing(rpc: Connection, mint: string, launchWallet: string) {
+  const { PUMP_SDK, feeSharingConfigPda } = pumpSdk();
+  const info = await rpc.getAccountInfo(feeSharingConfigPda(new PublicKey(mint)));
+  if (!info) return false;
+  const config = PUMP_SDK.decodeSharingConfig(info);
+  const expected = new Map(
+    feeShareholders(launchWallet).map((s) => [s.address.toBase58(), s.shareBps]),
+  );
+  return (
+    config.adminRevoked &&
+    config.shareholders.length === expected.size &&
+    config.shareholders.every((s) => expected.get(s.address.toBase58()) === s.shareBps)
+  );
+}
+/** Permissionless crank: pays the coin's accrued SOL creator fees to both shareholders. */
+export async function buildFeeDistribution(rpc: Connection, mint: string, payer: PublicKey) {
+  const { OnlinePumpSdk } = pumpSdk();
+  const { instructions } = await new OnlinePumpSdk(rpc).buildDistributeCreatorFeesInstructions(
+    new PublicKey(mint),
+    { quoteMint: NATIVE_MINT, payer },
+  );
+  return instructions;
 }

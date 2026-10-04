@@ -32,7 +32,6 @@ import { put } from "@vercel/blob";
 import {
   acpCoinTerms,
   buildAcpCreate,
-  checkAcpPair,
   verifyAcpCoin,
 } from "@/lib/acp-coin";
 import {
@@ -42,6 +41,11 @@ import {
   Transaction,
 } from "@solana/web3.js";
 import bs58 from "bs58";
+import { launchWalletsConfigured, launchKeypair, exportSecret } from "@/lib/launch-wallet";
+import { launchWalletView, ensureLaunchWallet, afterLaunch } from "@/lib/launch-service";
+import { markWalletExported } from "@/lib/fee-funding-store";
+import { ACP_LAUNCH_MIN_LAMPORTS } from "@/lib/acp-config";
+import { fundedCreator as launchAccess } from "@/lib/launchpad-media";
 
 export const runtime = "nodejs";
 export const maxDuration = 180;
@@ -64,7 +68,8 @@ function capabilities(): LaunchStatus {
       storage &&
       setting("HER_LAUNCHPAD_COINS_ENABLED") === "true" &&
       !!setting("BLOB_READ_WRITE_TOKEN") &&
-      !!setting("SOLANA_RPC_URL"),
+      !!setting("SOLANA_RPC_URL") &&
+      launchWalletsConfigured(),
     // A configured camera is not evidence of a supported multi-tenant broadcaster.
     broadcast: false,
     imageProvider: "higgsfield",
@@ -146,6 +151,14 @@ async function get(req: Request) {
     await faceResult(id, who, row.face_id, status);
     return json({ status, previewReady: face.status === "completed", ready });
   }
+  if (action(req) === "launch-wallet") {
+    const id = new URL(req.url).searchParams.get("id") || "";
+    if (!launchWalletsConfigured())
+      return json({ error: "Launch wallets are not activated yet." }, 503);
+    if (!(await ownedDraft(id, who)))
+      return json({ error: "Character not found." }, 404);
+    return json(await launchWalletView(connection(), id, who));
+  }
   if (action(req) === "coin") {
     const id = new URL(req.url).searchParams.get("id") || "",
       intent = await coinIntent(id, who);
@@ -161,10 +174,13 @@ async function get(req: Request) {
       receipt &&
       ["confirmed", "finalized"].includes(receipt.confirmationStatus || "")
     ) {
-      await verifyAcpCoin(connection(), intent.mint);
+      const launch = await ensureLaunchWallet(id, who);
+      await verifyAcpCoin(connection(), intent.mint, launch.public_key);
       await confirmCoin(id, who, intent.mint, intent.signature);
+      const feeSetup = await afterLaunch(connection(), id, who, intent.mint);
       return json({
         status: "confirmed",
+        feeSetup,
         mint: intent.mint,
         signature: intent.signature,
         url: `https://pump.fun/coin/${intent.mint}`,
@@ -189,6 +205,9 @@ async function post(req: Request) {
   if (raw.length > 100000) return json({ error: "Request too large." }, 413);
   const body = JSON.parse(raw),
     act = action(req);
+  if (act === "prepare-coin" || act === "confirm-coin") launchAccess(who);
+  if (act === "generate" || act === "train")
+    return json({ error: "Use Higgsfield portrait and video generation with paid credits." }, 410);
   if (act === "save") {
     const draft = localDraftSchema.parse(body.draft);
     await takeQuota(`save:${who}`, 200);
@@ -202,6 +221,18 @@ async function post(req: Request) {
       { error: "Character not found. Save it to your wallet first." },
       404,
     );
+  if (act === "export-wallet") {
+    // The launch wallet is custodial. The owner can take the key at any time.
+    if (!launchWalletsConfigured())
+      return json({ error: "Launch wallets are not activated yet." }, 503);
+    await takeQuota(`export:${who}`, 20);
+    const launch = await ensureLaunchWallet(id, who);
+    await markWalletExported(id, who);
+    return json({
+      address: launch.public_key,
+      secretKey: exportSecret(launch.sealed_secret, id, who),
+    });
+  }
   const draft = (act === "generate" ? localDraftSchema : act === "train" ? mediaDraftSchema : draftSchema).parse(JSON.parse(row.document));
   if (act === "generate") {
     if (!capabilities().generation)
@@ -310,7 +341,6 @@ async function post(req: Request) {
       !artwork.some((a) => a.purpose === "banner" && a.url === draft.coinBanner)
     )
       throw new Error("Upload the selected coin banner before launching.");
-    const quote = await checkAcpPair(connection());
     if (row.mint)
       return json({ error: "This character already has a coin." }, 409);
     const old = await coinIntent(id, who);
@@ -342,17 +372,21 @@ async function post(req: Request) {
         addRandomSuffix: true,
       },
     );
-    const mint = Keypair.generate(),
-      ownerKey = new PublicKey(who),
+    const launch = await ensureLaunchWallet(id, who),
+      mint = Keypair.generate(),
+      ownerKey = new PublicKey(launch.public_key),
       rpc = connection(),
       latest = await rpc.getLatestBlockhash();
+    if ((await rpc.getBalance(ownerKey, "confirmed")) < ACP_LAUNCH_MIN_LAMPORTS)
+      throw new Error(
+        `Deposit at least ${ACP_LAUNCH_MIN_LAMPORTS / 1e9} SOL to this character's launch wallet first.`,
+      );
     const instruction = await buildAcpCreate({
       mint: mint.publicKey,
       name: draft.name,
       symbol: draft.symbol,
       uri: metadata.url,
-      user: ownerKey,
-      quoteTokenProgram: quote.quoteTokenProgram,
+      creator: ownerKey,
     });
     const tx = new Transaction({
       feePayer: ownerKey,
@@ -392,23 +426,20 @@ async function post(req: Request) {
   if (act === "confirm-coin") {
     if (!capabilities().coinCreation)
       return json({ error: "Coin creation is paused." }, 503);
-    await checkAcpPair(connection());
     const intent = await coinIntent(id, who);
     if (!intent || intent.expires < Date.now())
       throw new Error("Launch review expired. Prepare again.");
+    // The launch wallet is custodial: the platform signs the exact reviewed message.
+    const launch = await ensureLaunchWallet(id, who),
+      tx = Transaction.from(Buffer.from(intent.transaction, "hex"));
     if (
-      typeof body.signedTransaction !== "string" ||
-      !/^[a-f0-9]+$/i.test(body.signedTransaction) ||
-      body.signedTransaction.length > 6000
+      tx.feePayer?.toBase58() !== launch.public_key ||
+      tx.serializeMessage().toString("hex") !== intent.message
     )
-      throw new Error("Invalid transaction.");
-    const tx = Transaction.from(Buffer.from(body.signedTransaction, "hex"));
-    if (
-      tx.feePayer?.toBase58() !== who ||
-      tx.serializeMessage().toString("hex") !== intent.message ||
-      !tx.verifySignatures()
-    )
-      throw new Error("Signed transaction does not match the reviewed launch.");
+      throw new Error("The stored launch does not match the reviewed message. Prepare again.");
+    tx.partialSign(launchKeypair(launch.sealed_secret, id, who));
+    if (!tx.verifySignatures())
+      throw new Error("Launch transaction could not be signed.");
     const signature = bs58.encode(tx.signature!);
     if (!(await claimCoin(id, who, signature)))
       throw new Error("This launch is already submitted. Check its status.");

@@ -1,7 +1,7 @@
 import { withDatabase } from "@/lib/database";
 import { wallet, mutationGuard, setting, json } from "@/lib/server";
 import { ownedDraft, takeQuota } from "@/lib/launchpad-store";
-import { fundedCreator } from "@/lib/launchpad-media";
+import { fundedCreator, requirePaidGeneration } from "@/lib/launchpad-media";
 import { mediaDraftSchema } from "@/lib/launchpad";
 import { generateScene, scriptProviderReady } from "@/lib/script-provider";
 import {
@@ -9,7 +9,7 @@ import {
   scriptMessages,
   scriptToClip,
 } from "@/lib/acp-script";
-import { streamCreditsEnabled, requireVideoCredit } from "@/lib/stream-credit-store";
+import { streamCreditsEnabled, debitScript } from "@/lib/stream-credit-store";
 export const runtime = "nodejs";
 export const maxDuration = 60;
 export async function POST(req: Request) {
@@ -32,6 +32,7 @@ export async function POST(req: Request) {
           503,
         );
       fundedCreator(who);
+      requirePaidGeneration();
       const raw = await req.text();
       if (raw.length > 26000) return json({ error: "Request too large." }, 413);
       const body = scriptRequestSchema.parse(JSON.parse(raw));
@@ -47,8 +48,8 @@ export async function POST(req: Request) {
       const draft = parsed.data;
       if (!draft.rightsConfirmed)
         throw new Error("Confirm character rights first.");
-      if (streamCreditsEnabled()) await requireVideoCredit(body.id,who);
       await takeQuota(`script:${who}`, streamCreditsEnabled() ? 600 : 100);
+      if (!(await debitScript(body.id, who))) return json({ error: "Buy generation time first; no script allowance remains." }, 402);
       const result = await generateScene(scriptMessages(draft, "script", body.brief, []));
       return json({
         clip: scriptToClip(result, body.mode),
