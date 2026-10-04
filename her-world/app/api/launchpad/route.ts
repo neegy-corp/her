@@ -9,6 +9,7 @@ import {
 } from "@/lib/server";
 import {
   draftSchema,
+  mediaDraftSchema,
   localDraftSchema,
   visualFingerprint,
   type LaunchStatus,
@@ -53,6 +54,8 @@ function capabilities(): LaunchStatus {
       setting("HER_LAUNCHPAD_GENERATION_ENABLED") === "true" &&
       !!(setting("HF_API_KEY") || setting("OPENAI_API_KEY")) &&
       !!setting("BLOB_READ_WRITE_TOKEN"),
+    scripts: storage && setting("ACP_SCRIPTS_ENABLED") === "true" && !!(setting("ANTHROPIC_API_KEY") || setting("OPENAI_API_KEY")),
+    videos: storage && setting("HER_LAUNCHPAD_VIDEOS_ENABLED") === "true" && !!((setting("HF_API_KEY") && setting("BLOB_READ_WRITE_TOKEN")) || setting("FAL_KEY") || setting("TAVUS_API_KEY")),
     faces:
       storage &&
       setting("HER_LAUNCHPAD_FACES_ENABLED") === "true" &&
@@ -199,7 +202,7 @@ async function post(req: Request) {
       { error: "Character not found. Save it to your wallet first." },
       404,
     );
-  const draft = draftSchema.parse(JSON.parse(row.document));
+  const draft = (act === "generate" ? localDraftSchema : act === "train" ? mediaDraftSchema : draftSchema).parse(JSON.parse(row.document));
   if (act === "generate") {
     if (!capabilities().generation)
       return json(
@@ -210,6 +213,8 @@ async function post(req: Request) {
         503,
       );
     fundedCreator(who);
+    if (draft.appearance.trim().length < 20 || draft.background.trim().length < 10)
+      throw new Error("Describe the appearance and choose a setting in Voice & setting first.");
     if (!draft.rightsConfirmed)
       throw new Error("Confirm rights to your character first.");
     if (row.face_status !== "draft" || row.mint)

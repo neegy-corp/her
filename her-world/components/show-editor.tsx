@@ -19,6 +19,7 @@ import {
 import type { CharacterDraft } from "@/lib/launchpad";
 import type { ShowPlan, ShowClip } from "@/lib/show";
 import { REFERENCE_LIMIT } from "@/lib/acp-config";
+import { addGeneratedScene, emptyScene } from "@/lib/creator-workflow";
 import ContinuousProgram from "./continuous-program";
 type RefPhoto = { id: string; name: string; file: Blob };
 type Render = {
@@ -75,12 +76,16 @@ export default function ShowEditor({
   onNotice,
   onImage,
   servicesAvailable,
+  scriptsAvailable,
+  videosAvailable,
 }: {
   draft: CharacterDraft;
   onChange: (show: ShowPlan) => void;
   onNotice: (s: string) => void;
   onImage: (image: { image: string; imageFingerprint: string }) => void;
   servicesAvailable: boolean;
+  scriptsAvailable: boolean;
+  videosAvailable: boolean;
 }) {
   const [photos, setPhotos] = useState<(RefPhoto & { url: string })[]>([]),
     [busy, setBusy] = useState(""),
@@ -220,7 +225,7 @@ export default function ShowEditor({
     }
   }
   async function writeScene() {
-    if (show.clips.length >= 48) {
+    if (show.clips.length >= 48 && !show.clips.some(emptyScene)) {
       setError("This show already has 48 scenes.");
       return;
     }
@@ -243,7 +248,7 @@ export default function ShowEditor({
       };
       if (!response.ok)
         throw new Error(result.error || "Script generation unavailable.");
-      onChange({ ...show, clips: [...show.clips, result.clip] });
+      onChange(addGeneratedScene(show, result.clip));
       onNotice(
         "AI scene added. Review its script and direction before generating the video.",
       );
@@ -260,12 +265,13 @@ export default function ShowEditor({
   return (
     <div className="lp-show">
       {!servicesAvailable && <p className="lp-service-note">Connect your wallet and cloud services to generate videos. You can write your show now.</p>}
-      <ContinuousProgram draft={draft} onChange={onChange} onBusy={setPreparing} servicesAvailable={servicesAvailable} />
+      {servicesAvailable && (!scriptsAvailable || !videosAvailable) && <p className="lp-service-note">{!scriptsAvailable ? "AI script generation is not connected. " : ""}{!videosAvailable ? "Video generation is not connected. " : ""}Your edits and uploaded media are preserved.</p>}
+      <ContinuousProgram draft={draft} onChange={onChange} onBusy={setPreparing} servicesAvailable={servicesAvailable && scriptsAvailable && videosAvailable && !busy} />
       <fieldset disabled={preparing} style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
       <div className="lp-show-toolbar"><h3>Your scenes</h3>
       <Button
         variant="outline" className="lp-secondary"
-        disabled={!!busy || show.clips.length >= 48 || !servicesAvailable}
+        disabled={!!busy || (show.clips.length >= 48 && !show.clips.some(emptyScene)) || !servicesAvailable || !scriptsAvailable}
         onClick={() => void writeScene()}
       >
         {busy === "script" ? "Writing scene…" : "Write a scene with AI"}
@@ -395,7 +401,7 @@ export default function ShowEditor({
             </label>
             <Button
               variant="outline" className="lp-secondary"
-              disabled={!!busy || !servicesAvailable}
+              disabled={!!busy || !servicesAvailable || !videosAvailable || !draft.rightsConfirmed || emptyScene(clip)}
               onClick={() => void render(clip)}
             >
               {busy === clip.id ? (

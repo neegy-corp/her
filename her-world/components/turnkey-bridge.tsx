@@ -41,7 +41,7 @@ function Connector({ onReady, onConnected, onError }: Props) {
         if (previous) await latest.current.disconnectWalletAccount(previous);
       },
       signTransaction: async hex => {
-        if (!account.current) throw new Error('Reconnect your wallet from wallet activity before burning.');
+        if (!account.current) { setError(''); setOpen(true); throw new Error('Reconnect your wallet, then review and confirm the transaction again.'); }
         return latest.current.signTransaction({ unsignedTransaction: hex, transactionType: 'TRANSACTION_TYPE_SOLANA', walletAccount: account.current });
       },
     });

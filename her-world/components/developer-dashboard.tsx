@@ -11,6 +11,8 @@ import { shortWallet } from "@/lib/catalog";
 import "./launchpad.css";
 import "./acp-pages.css";
 
+import { saveStudioDraft } from "@/lib/creator-workflow";
+
 type OwnedCharacter = CharacterDraft & { mint?: string; signature?: string; faceStatus?: string };
 export default function DeveloperDashboard() { return <WalletRoot><Dashboard /></WalletRoot>; }
 function Dashboard() {
@@ -41,6 +43,15 @@ function Dashboard() {
     const newer = current.find(x => x.id === d.id && x.updatedAt > d.updatedAt);
     localStorage.setItem(DRAFT_STORE, JSON.stringify(keepDraft(current, newer || d)));
   }
+  async function openStudio(draft: CharacterDraft) {
+    if (!viewer.wallet) { connect(); return; }
+    setLoading(true); setError("");
+    try {
+      const device = readLocalDrafts(localStorage.getItem(DRAFT_STORE)).find(d => d.id === draft.id);
+      window.location.assign(await saveStudioDraft(device && device.updatedAt > draft.updatedAt ? device : draft));
+    } catch (reason) { setError(reason instanceof Error ? reason.message : "Could not open the studio."); }
+    finally { setLoading(false); }
+  }
   function card(d: OwnedCharacter, cloud: boolean) {
     return <article className="acp-dev-card" key={d.id}>
       <div className="acp-dev-identity">
@@ -51,7 +62,7 @@ function Dashboard() {
       <div className="acp-dev-links">
         {([['character', 'Character'], ['personality', 'Voice & setting'], ['show', 'Show'], ['launch', 'Launch']] as const).map(([step, label]) => <Link key={step} href={creatorPath(d.id, step)} onClick={() => stash(d)}>{label} <ArrowUpRight size={14} aria-hidden="true" /></Link>)}
       </div>
-      <div className="acp-dev-actions"><Button asChild><Link href={`/studio/${d.id}`}>Broadcast studio <ArrowUpRight size={14} aria-hidden="true" /></Link></Button>{cloud && d.mint && <Button variant="outline" asChild><a href={`https://pump.fun/coin/${d.mint}`} target="_blank" rel="noreferrer">Open pump.fun <ArrowUpRight size={14} aria-hidden="true" /></a></Button>}</div>
+      <div className="acp-dev-actions"><Button disabled={loading || !status?.storage} onClick={() => void openStudio(d)}>Broadcast studio <ArrowUpRight size={14} aria-hidden="true" /></Button>{cloud && d.mint && <Button variant="outline" asChild><a href={`https://pump.fun/coin/${d.mint}`} target="_blank" rel="noreferrer">Open pump.fun <ArrowUpRight size={14} aria-hidden="true" /></a></Button>}</div>
       {cloud && d.mint && <p className="acp-dev-mint">{d.mint}</p>}
     </article>;
   }
@@ -63,7 +74,7 @@ function Dashboard() {
     {loading && <p role="status">Loading your wallet's characters…</p>}
     {!loading && !localOnly.length && !remote.length && !error && <div className="studio-empty"><div className="studio-empty-symbol" aria-hidden="true"><Plus size={36} strokeWidth={1.5} /></div><div><h2>Make your first main character.</h2><p>Start with a name and a point of view. Your draft saves on this device as you work; connect a wallet to save it across devices when cloud storage is available.</p><Button asChild><Link href="/create">Open the character builder <ArrowUpRight size={14} aria-hidden="true" /></Link></Button></div></div>}
     {!!remote.length && <div className="acp-dev-grid">{remote.map(d => card(d, true))}</div>}
-    {!loading && viewer.wallet && !remote.length && !error && <div className="lp-empty"><h2>No wallet-saved characters yet.</h2><p>Create a character and choose Save to wallet to add it here.</p></div>}
+    {!loading && viewer.wallet && !remote.length && !error && <div className="lp-empty"><h2>No wallet-saved characters yet.</h2><p>Create a character and choose Sync to add it here.</p></div>}
     {!!localOnly.length && <><h2 className="acp-dev-local-title">On this device.</h2><p>Private browser drafts. Save to your connected wallet for access from another device.</p><div className="acp-dev-grid">{localOnly.map(d => card(d, false))}</div></>}
   </section><AcpFooter /></main>;
 }

@@ -2,7 +2,7 @@ import { withDatabase } from "@/lib/database";
 import { wallet, mutationGuard, setting, json } from "@/lib/server";
 import { ownedDraft, takeQuota } from "@/lib/launchpad-store";
 import { fundedCreator } from "@/lib/launchpad-media";
-import { draftSchema } from "@/lib/launchpad";
+import { mediaDraftSchema } from "@/lib/launchpad";
 import { generateScene, scriptProviderReady } from "@/lib/script-provider";
 import {
   scriptRequestSchema,
@@ -40,7 +40,9 @@ export async function POST(req: Request) {
           { error: "Save this character to your wallet first." },
           404,
         );
-      const draft = draftSchema.parse(JSON.parse(row.document));
+      const parsed = mediaDraftSchema.safeParse(JSON.parse(row.document));
+      if (!parsed.success) throw new Error("Complete the character name, bio, appearance, personality and setting before writing scenes. A coin ticker is not needed yet.");
+      const draft = parsed.data;
       if (!draft.rightsConfirmed)
         throw new Error("Confirm character rights first.");
       await takeQuota(`script:${who}`, 100);

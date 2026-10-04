@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
+import { addGeneratedScene, emptyScene } from "@/lib/creator-workflow";
 import { preparedSeconds, type ShowPlan, type ShowClip } from "@/lib/show";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -19,21 +20,21 @@ export default function ContinuousProgram({ draft, onChange, onBusy, servicesAva
   async function prepare() {
     const abort = new AbortController(); controller.current = abort;
     setWorking(true); onBusy(true);
-    let current = { ...draft, show: { ...draft.show, continuous: true, bufferMinutes: 10 as const, clips: [...draft.show.clips] } };
+    let current: CharacterDraft = { ...draft, show: { ...draft.show, continuous: true, bufferMinutes: 10 as const, clips: [...draft.show.clips] } };
     const request = async (path: string, body?: unknown) => {
       const r = await fetch(`/api/launchpad${path}`, { method: body ? "POST" : "GET", headers: body ? { "Content-Type": "application/json" } : {}, body: body ? JSON.stringify(body) : undefined, signal: abort.signal });
       const value = await r.json() as { error?: string; clip?: ShowClip; renders?: Render[] }; if (!r.ok) throw new Error(value.error || "Preparation failed."); return value;
     };
     try {
       await request("?action=save", { draft: current });
-      const target = current.show.bufferMinutes * 60;
-      while (preparedSeconds(current.show) < target) {
-        if (current.show.clips.length >= 48) throw new Error("Use longer scenes to keep the show within 48 clips.");
+      const target = 10 * 60;
+      while (current.show.clips.some(emptyScene) || preparedSeconds(current.show) < target) {
+        if (current.show.clips.length >= 48 && !current.show.clips.some(emptyScene)) throw new Error("Use longer scenes to keep the show within 48 clips.");
         setStatus(`Writing scene ${current.show.clips.length + 1} for your show…`);
         const { clip } = await request("/scripts", { id: draft.id, mode: "script", brief: `Continue the same character's show with a distinct 15-second scene. Do not repeat an introduction. Same outfit, setting and personality. Prior dialogue: ${current.show.clips.slice(-5).map(c => c.script).join(" | ").slice(-650)}` });
         if (!clip) throw new Error("The script service returned no scene.");
         clip.duration = 15; clip.chatPause = 0;
-        current = { ...current, updatedAt: Date.now(), show: { ...current.show, clips: [...current.show.clips, clip] } };
+        current = { ...current, updatedAt: Date.now(), show: addGeneratedScene(current.show, clip) };
         await request("?action=save", { draft: current }); onChange(current.show);
       }
       const attempted = new Set<string>();
@@ -63,5 +64,5 @@ export default function ContinuousProgram({ draft, onChange, onBusy, servicesAva
     } catch (e) { setStatus(abort.signal.aborted ? "Preparation paused. Saved scenes and submitted renders are preserved." : e instanceof Error ? e.message : "Preparation unavailable."); }
     finally { if (controller.current === abort) { controller.current = null; setWorking(false); onBusy(false); } }
   }
-  return <section className="lp-stream-setup" aria-label="Continuous livestream"><div className="lp-stream-heading"><Radio size={19} /><div><Label htmlFor="continuous-show">Continuous livestream</Label><p>Prepare your show once. Keep it playing.</p></div><Switch id="continuous-show" checked={!!draft.show.continuous} disabled={working} onCheckedChange={continuous => onChange({...draft.show, continuous, bufferMinutes: 10})} /></div>{draft.show.continuous && <div className="lp-stream-actions"><Button disabled={working || !draft.rightsConfirmed || !servicesAvailable} onClick={() => void prepare()}>{working ? "Preparing your show…" : "Prepare show"}</Button>{working && <Button variant="outline" onClick={() => controller.current?.abort()}>Pause</Button>}<p>Generation uses credits. Keep the studio open while live.</p><details className="lp-details"><summary>How continuous playback works</summary><p>New scenes use your generation limit. If rendering falls behind or credits run out, prepared scenes replay with a replay label.</p></details></div>}{status && <p role="status">{status}</p>}</section>;
+  return <section className="lp-stream-setup" aria-label="Continuous livestream"><div className="lp-stream-heading"><Radio size={19} /><div><Label htmlFor="continuous-show">Continuous livestream</Label><p>Prepare 10 minutes of scenes. Keep them playing.</p></div><Switch id="continuous-show" checked={!!draft.show.continuous} disabled={working} onCheckedChange={continuous => onChange({...draft.show, continuous, bufferMinutes: 10})} /></div>{draft.show.continuous && <div className="lp-stream-actions"><Button disabled={working || !draft.rightsConfirmed || !draft.image || !servicesAvailable} onClick={() => void prepare()}>{working ? "Preparing your show…" : "Prepare show"}</Button>{working && <Button variant="outline" onClick={() => controller.current?.abort()}>Pause</Button>}<p>Generate or upload your character image first. Preparing 10 minutes uses paid credits for every new scene. Keep the studio open while live.</p><details className="lp-details"><summary>How continuous playback works</summary><p>New scenes use your generation limit. If rendering falls behind or credits run out, prepared scenes replay with a replay label.</p></details></div>}{status && <p role="status">{status}</p>}</section>;
 }

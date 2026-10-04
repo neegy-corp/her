@@ -36,7 +36,7 @@ registerHooks({
     return next(specifier, context);
   },
 });
-const { newDraft, draftSchema, localDraftSchema, visualFingerprint } =
+const { newDraft, draftSchema, mediaDraftSchema, localDraftSchema, visualFingerprint } =
   await import("../lib/launchpad.ts");
 const { imageType, performanceInput, safeVideoUrl } =
   await import("../lib/launchpad-media.ts");
@@ -930,4 +930,44 @@ test("buffer verification measures actual media, rejects bad media and cancels b
     await assert.rejects(measureMediaBuffer([{id:'bad',url:'https://example.com/bad'}],new AbortController().signal),/could not be checked/);
     const stop=new AbortController();stop.abort();await assert.rejects(measureMediaBuffer(clips,stop.signal),/Stopped/);
   } finally {if(original===undefined)delete globalThis.document;else globalThis.document=original;}
+});
+
+
+const { addGeneratedScene, emptyScene, saveStudioDraft } = await import("../lib/creator-workflow.ts");
+test("media creation works before the final ticker step while coin validation remains strict", () => {
+  const draft = {...newDraft(), name: "Test host", description: "An original fictional host.", appearance: "An adult host in a simple blue jacket.", personality: "Curious, warm and conversational with viewers.", background: "A quiet sunlit cafe with soft light."};
+  assert.equal(mediaDraftSchema.safeParse(draft).success, true);
+  assert.equal(draftSchema.safeParse(draft).success, false);
+  assert.equal(draftSchema.safeParse({...draft, symbol: "HOST"}).success, true);
+  assert.equal(mediaDraftSchema.safeParse({...draft, appearance: ""}).success, false);
+});
+test("AI writing fills empty opening scenes without discarding authored scenes", () => {
+  const show = newDraft().show, opening = show.clips[0].id;
+  const authored = {...defaultShow().clips[1], id: crypto.randomUUID()};
+  const plan = {...show, clips: [...show.clips, authored]};
+  const filled = addGeneratedScene(plan, defaultShow().clips[0]);
+  assert.equal(filled.clips.length, 2);
+  assert.equal(filled.clips[0].id, opening);
+  assert.equal(filled.clips.some(emptyScene), false);
+  assert.deepEqual(filled.clips[1], authored);
+  assert.equal(plan.clips[0].script, "");
+  assert.equal(addGeneratedScene(filled, defaultShow().clips[0]).clips.length, 3);
+});
+test("full preparation can replace an empty scene but cannot exceed 48 scenes", () => {
+  const plan = {...newDraft().show, clips: Array.from({length:48}, () => defaultShow().clips[0])};
+  assert.throws(() => addGeneratedScene(plan, defaultShow().clips[0]), /48/);
+  plan.clips[47] = {...plan.clips[47], script:" ", direction:""};
+  assert.equal(addGeneratedScene(plan, defaultShow().clips[0]).clips.length, 48);
+});
+test("studio navigation waits for cloud save and fails closed on save errors", async () => {
+  const draft = newDraft(); let release; let settled = false;
+  const pending = saveStudioDraft(draft, async (url, init) => {
+    assert.equal(url, "/api/launchpad?action=save");
+    assert.equal(JSON.parse(init.body).draft.id, draft.id);
+    await new Promise(resolve => { release = resolve; });
+    return Response.json({saved:true});
+  }).then(url => {settled = true; return url;});
+  await Promise.resolve(); assert.equal(settled, false); release();
+  assert.equal(await pending, `/studio/${draft.id}`);
+  await assert.rejects(saveStudioDraft(draft, async () => Response.json({error:"Save failed"}, {status:503})), /Save failed/);
 });

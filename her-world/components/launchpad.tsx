@@ -49,6 +49,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ACP_FEE_WALLET, ACP_QUOTE_MINT } from "@/lib/acp-config";
 import { DRAFT_STORE, creatorPath, readLocalDrafts, keepDraft, type CreatorStep } from "@/lib/creator-navigation";
 
+import { saveStudioDraft } from "@/lib/creator-workflow";
+
 const STORE = DRAFT_STORE;
 type Step = CreatorStep;
 const steps = [
@@ -302,10 +304,17 @@ function Home({ characterId, initialStep = "character" }: EditorProps) {
       setError("Browser blocked the audio preview. Try again.");
     });
   }
+  async function openStudio() {
+    if (!draft || !persistCurrent()) return;
+    if (!viewer.wallet) { connect(); return; }
+    await task("Saving show", async () => {
+      window.location.assign(await saveStudioDraft(draft));
+    });
+  }
   async function prepare() {
     if (!draft) return;
     await task("Preparing launch", async () => {
-      if (faceStatus === "draft") await request("save", { draft });
+      await request("save", { draft });
       setReview(await request("prepare-coin", { id: draft.id }));
       setConfirm(false);
     });
@@ -414,7 +423,7 @@ function Home({ characterId, initialStep = "character" }: EditorProps) {
                     <Button
                       className="lp-primary lp-wide"
                       disabled={
-                        !!busy || !draft.rightsConfirmed || !status.generation
+                        !!busy || !draft.rightsConfirmed || draft.appearance.trim().length < 20 || draft.background.trim().length < 10 || !status.generation
                       }
                       onClick={() => void generate()}
                     >
@@ -427,6 +436,7 @@ function Home({ characterId, initialStep = "character" }: EditorProps) {
                         ? "Creating your portrait…"
                         : "Generate portrait"}
                     </Button>
+                    {draft.background.trim().length < 10 && <p className="lp-field-note">Choose a background in <a href={creatorPath(draft.id, "personality")} onClick={e => { if (!persistCurrent()) e.preventDefault(); }}>Voice &amp; setting</a> before generating your portrait.</p>}
                     {status.imageProvider === "higgsfield" && <Button variant="outline" className="lp-secondary" disabled={!!busy} onClick={() => void task("Checking portrait", () => portraitRequest("GET"))}>Check portrait {portraitStatus && `· ${portraitStatus}`}</Button>}
                     {!status.generation && (
                       <p className="lp-field-note">
@@ -468,6 +478,8 @@ function Home({ characterId, initialStep = "character" }: EditorProps) {
                     onNotice={setNotice}
                     onImage={(image) => edit(image)}
                     servicesAvailable={!!viewer.wallet && status.storage}
+                    scriptsAvailable={status.scripts}
+                    videosAvailable={status.videos}
                   />
                 )}
                 {step === "artwork" && <><FormTitle kicker="THE TOKEN IDENTITY" title="Give the coin its own look." /><CoinArtwork draft={draft} onChange={edit} servicesAvailable={!!viewer.wallet && status.storage} /><Button variant="ghost" className="lp-next" onClick={() => setStep("launch")}>Continue to launch <ArrowRight size={16} /></Button></>}
@@ -559,6 +571,7 @@ function Home({ characterId, initialStep = "character" }: EditorProps) {
                           !!busy ||
                           !status.coinCreation ||
                           !draft.coinPfp ||
+                          !draft.rightsConfirmed ||
                           !!coin.signature ||
                           !!coin.mint
                         }
@@ -594,7 +607,7 @@ function Home({ characterId, initialStep = "character" }: EditorProps) {
                         Open your coin <ArrowUpRight size={16} />
                       </a>
                     )}
-                    <p className="lp-field-note">Coin creation and broadcasting are separate. <a href={`/studio/${draft.id}`}>Open broadcast studio</a></p>
+                    <p className="lp-field-note">Coin creation and broadcasting are separate. <Button variant="link" disabled={!!busy || !status.storage} onClick={() => void openStudio()}>Open broadcast studio</Button></p>
                   </>
                 )}
               </div>

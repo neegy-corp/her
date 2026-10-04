@@ -91,6 +91,8 @@ export const draftSchema = z.object({
   show: showSchema.default(defaultShow),
 });
 export type CharacterDraft = z.infer<typeof draftSchema>;
+// Token identity is collected in Launch, after the creator has made their media.
+export const mediaDraftSchema = draftSchema.extend({ symbol: z.string().max(10) });
 // Local autosave must retain unfinished fields; cloud/provider submissions use the strict schema.
 export const localDraftSchema = draftSchema.extend({
   name: z.string().max(32),
@@ -104,6 +106,8 @@ export type LaunchStatus = {
   storage: boolean;
   generation: boolean;
   faces: boolean;
+  scripts: boolean;
+  videos: boolean;
   coinCreation: boolean;
   broadcast: boolean;
   imageProvider?: "higgsfield" | "openai";
@@ -113,6 +117,8 @@ export const offlineStatus: LaunchStatus = {
   storage: false,
   generation: false,
   faces: false,
+  scripts: false,
+  videos: false,
   coinCreation: false,
   broadcast: false,
   message: "Checking launch services…",

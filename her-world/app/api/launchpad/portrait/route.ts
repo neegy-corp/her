@@ -21,7 +21,7 @@ async function handle(req: Request) {
     if (req.method === "POST" && !job) {
       if (setting("HER_LAUNCHPAD_GENERATION_ENABLED") !== "true" || !setting("HF_API_KEY") || !setting("BLOB_READ_WRITE_TOKEN")) return json({ error: "Higgsfield portrait credits are not connected. No generation was submitted." }, 503);
       fundedCreator(who);
-      if (draft.appearance.trim().length < 20 || draft.background.trim().length < 10) throw new Error("Describe the character's appearance and choose a background on The scene page first.");
+      if (draft.appearance.trim().length < 20 || draft.background.trim().length < 10) throw new Error("Describe the character's appearance and choose a background in Voice & setting first.");
       if (!draft.rightsConfirmed || row.face_status !== "draft" || row.mint) throw new Error("Confirm image rights; a launched or trained character's image cannot change.");
       await takeQuota(`image:${who}`, 5);
       job = { id: crypto.randomUUID(), character_id: id, wallet: who, clip_id: PORTRAIT_CLIP, fingerprint, provider: "higgsfield", provider_id: null, status: "submitting", video_url: null, created_at: Date.now() };

@@ -1,7 +1,7 @@
 import { withDatabase } from "@/lib/database";
 import { json, setting, wallet } from "@/lib/server";
 import { ownedDraft, renders, assets } from "@/lib/launchpad-store";
-import { draftSchema } from "@/lib/launchpad";
+import { mediaDraftSchema } from "@/lib/launchpad";
 import { digest } from "@/lib/launchpad-media";
 export const runtime = "nodejs";
 export async function GET(req: Request) {
@@ -16,7 +16,7 @@ export async function GET(req: Request) {
       const id = new URL(req.url).searchParams.get("id") || "";
       const row = await ownedDraft(id, who);
       if (!row) return json({ error: "Character not found." }, 404);
-      const draft = draftSchema.parse(JSON.parse(row.document));
+      const draft = mediaDraftSchema.parse(JSON.parse(row.document));
       const [jobs, images] = await Promise.all([
         renders(id, who),
         assets(id, who),

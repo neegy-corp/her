@@ -8,7 +8,7 @@ import {
   updateRender,
   takeQuota,
 } from "@/lib/launchpad-store";
-import { draftSchema } from "@/lib/launchpad";
+import { mediaDraftSchema } from "@/lib/launchpad";
 import { clipSchema } from "@/lib/show";
 import {
   digest,
@@ -52,7 +52,7 @@ async function handle(req: Request) {
         );
       if (req.method === "GET") {
         const saved = (await renders(id, who)).filter(r => r.clip_id !== PORTRAIT_CLIP);
-        const document = draftSchema.safeParse(JSON.parse(row.document));
+        const document = mediaDraftSchema.safeParse(JSON.parse(row.document));
         const refAssets = await assets(id, who);
         const refUrls = refAssets.filter(a => a.purpose === "reference").map(a => a.url);
         const inputImages = (refUrls.length ? refUrls : row.image_url ? [row.image_url] : []).filter((url, i, all) => all.indexOf(url) === i).slice(0, 4);
@@ -141,7 +141,9 @@ async function handle(req: Request) {
           503,
         );
       fundedCreator(who);
-      const draft = draftSchema.parse(JSON.parse(row.document));
+      const parsed = mediaDraftSchema.safeParse(JSON.parse(row.document));
+      if (!parsed.success) throw new Error("Complete the character name, bio, appearance, personality and setting before generating video. A coin ticker is not needed yet.");
+      const draft = parsed.data;
       if (!draft.rightsConfirmed)
         throw new Error("Confirm your character image rights first.");
       const clip = body.clip
