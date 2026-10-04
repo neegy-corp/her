@@ -112,7 +112,7 @@ export default function StreamCredits({ id, onState }: { id: string; onState?: (
           End paid session and save remaining time
         </Button>
       )}
-      {!state?.enabled && <p>Video time opens once streaming is activated. Nothing is being charged.</p>}
+      {state && !state.enabled && <p>Video time opens once streaming is activated. Nothing is being charged.</p>}
       {!viewer.wallet ? (
         <Button onClick={connect}>Connect developer wallet</Button>
       ) : (

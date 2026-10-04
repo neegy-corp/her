@@ -1,6 +1,9 @@
 .acp-pages {
   min-height: 100vh;
 }
+.acp-generation-credits { width: min(100%, 960px); margin: 0 auto; padding: 48px 24px 80px; }
+.acp-generation-credits > p { color: var(--lp-muted); line-height: 1.7; margin: 16px 0; }
+.acp-generation-credits > section { margin: 32px 0; }
 .acp-dev-account { display:flex; align-items:center; gap:24px; padding:24px 0; border-block:1px solid var(--lp-line); }
 .acp-dev-account > div { flex:1; }
 .acp-dev-account p, .acp-dev-card p { color:var(--lp-muted); font-size:14px; line-height:1.6; }
