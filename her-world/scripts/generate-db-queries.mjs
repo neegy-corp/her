@@ -1,7 +1,7 @@
 import ts from 'typescript';
 import fs from 'node:fs';
 const queries = new Set();
-for (const filename of ['app/api/her/route.ts', 'lib/server.ts', 'lib/rounds.ts', 'lib/operator-store.ts', 'lib/launchpad-store.ts']) {
+for (const filename of ['app/api/her/route.ts', 'lib/server.ts', 'lib/rounds.ts', 'lib/operator-store.ts', 'lib/launchpad-store.ts', 'lib/stream-credit-store.ts']) {
   const source = ts.createSourceFile(filename, fs.readFileSync(filename, 'utf8'), ts.ScriptTarget.Latest, true);
   const constants = new Map();
   function value(node) {

@@ -4,6 +4,7 @@ import { preparedSeconds } from "./show";
 import type { RenderedClip } from "./show-runner";
 export type StudioManifest = {
   name: string;
+  creditsRequired?: boolean;
   mint: string | null;
   ready: boolean;
   show: ShowPlan;

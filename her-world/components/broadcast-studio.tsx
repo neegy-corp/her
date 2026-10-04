@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Video, ArrowLeft, ArrowUpRight } from "lucide-react";
 import { ShowRunner, type RenderedClip } from "@/lib/show-runner";
 import { ContinuousShowRunner } from "@/lib/continuous-show";
@@ -9,6 +9,8 @@ import { WhipPublisher } from "@/lib/whip-publisher";
 import { openPumpChat } from "@/lib/pump-chat";
 import type { ChatMessage, ShowClip, ShowPlan } from "@/lib/show";
 import "./launchpad.css";
+import StreamCredits from "./stream-credits";
+import type { StreamCreditState } from "@/lib/stream-plans";
 import { WalletRoot, useWallet } from "./wallet";
 import {
   broadcastPreflight,
@@ -61,6 +63,31 @@ function Studio({ id }: { id: string }) {
   const { viewer, connect } = useWallet();
   const sessionAbort = useRef<AbortController | null>(null);
   const stopping = useRef(false);
+  const creditSession = useRef<string | null>(null), creditDeadline = useRef(0), checkingCreditExpiry = useRef(false);
+  const [credits,setCredits] = useState<StreamCreditState | null>(null);
+  const updateCredits = useCallback((value: StreamCreditState) => {
+    setCredits(value);
+    if (value.enabled && runner.current instanceof ContinuousShowRunner) runner.current.updateVideoAllowance(value.videoSeconds);
+    if (creditSession.current) creditDeadline.current = value.sessionId === creditSession.current ? Date.now() + Math.max(0,value.endsAt-value.serverNow) : Date.now();
+  },[]);
+  function endCreditSession(sessionId: string) {
+    void fetch(`/api/launchpad/credits?id=${encodeURIComponent(id)}&action=stop`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({sessionId}),keepalive:true}).catch(()=>{});
+  }
+  async function activateCredits(controller: AbortController | null) {
+    if (!manifest?.creditsRequired) return;
+    const sessionId=creditSession.current || crypto.randomUUID();
+    try {
+      const result=await api<{endsAt:number;serverNow:number}>(`/credits?id=${encodeURIComponent(id)}&action=start`,{sessionId});
+      if (!controller || controller.signal.aborted || sessionAbort.current!==controller) throw new Error("Stopped.");
+      creditSession.current=sessionId;
+      creditDeadline.current=Date.now()+Math.max(0,result.endsAt-result.serverNow);
+    } catch(error) { endCreditSession(sessionId);throw error; }
+  }
+  function releaseCredits() {
+    const sessionId=creditSession.current;creditSession.current=null;creditDeadline.current=0;
+    if (!sessionId) return;
+    endCreditSession(sessionId);
+  }
   const [revision, setRevision] = useState(0),
     [loading, setLoading] = useState(false),
     [layout, setLayout] = useState("portrait");
@@ -206,6 +233,7 @@ function Studio({ id }: { id: string }) {
             if (sessionAbort.current === controller)
               sessionAbort.current = null;
             controller.abort();
+            releaseCredits();
             if (cleanup.current === dispose) cleanup.current = null;
             release();
           };
@@ -365,6 +393,8 @@ function Studio({ id }: { id: string }) {
               controller.signal,
             );
             if (disposed || controller.signal.aborted) return;
+            await activateCredits(controller);
+            if (disposed || controller.signal.aborted) { releaseCredits(); return; }
             setConnected(true);
             setPublishing(false);
             setKey("");
@@ -373,7 +403,8 @@ function Studio({ id }: { id: string }) {
             );
           }
           const Runner = manifest.show.continuous ? ContinuousShowRunner : ShowRunner;
-          const current = new Runner(manifest.mint || id, manifest.show, {
+          const playbackPlan = manifest.creditsRequired ? {...manifest.show, maxGenerations: Math.max(manifest.show.maxGenerations, Math.ceil((credits?.videoSeconds || 0)/3))} : manifest.show;
+          const current = new Runner(manifest.mint || id, playbackPlan, {
             play,
             reply: (message, signal) =>
               renderResponse("reply", [message], signal),
@@ -393,10 +424,27 @@ function Studio({ id }: { id: string }) {
           disposeSteps.push(stopChat);
           if (!manifest.mint) setChat("No deployed coin; rehearsal only");
           const advance = () => {
+            if (creditSession.current && creditDeadline.current <= Date.now()) {
+              // A burn in another tab may have extended this session since the last poll.
+              if (!checkingCreditExpiry.current) {
+                checkingCreditExpiry.current=true;
+                const sessionId=creditSession.current;
+                void api<StreamCreditState>(`/credits?id=${encodeURIComponent(id)}`).then(value=>{
+                  if (disposed || creditSession.current!==sessionId) return;
+                  updateCredits(value);
+                  if (value.sessionId!==sessionId || value.endsAt<=value.serverNow) {
+                    void stop();setError("Stream time ended. Burn ACP to add another session.");
+                  }
+                }).catch(()=>{
+                  if (!disposed && creditSession.current===sessionId) {void stop();setError("Could not verify remaining stream time. Check your saved credits before restarting.");}
+                }).finally(()=>{checkingCreditExpiry.current=false;});
+              }
+              return;
+            }
             const wasBusy = current.busy;
             void current.tick().then(() => {
               if (disposed) return;
-              setPhase(current instanceof ContinuousShowRunner ? `${current.replaying ? "replaying" : "playing"} · ${current.buffered} queued · ${current.rendering} rendering · ${current.submitted}/${manifest.show.maxGenerations} new renders used${current.generationPaused ? " · generation paused after an error" : ""}` : current.state.phase);
+              setPhase(current instanceof ContinuousShowRunner ? `${current.replaying ? "replaying" : "playing"} · ${current.buffered} queued · ${current.rendering} rendering · ${current.submitted}/${playbackPlan.maxGenerations} new renders used${current.generationPaused ? " · generation paused after an error" : ""}` : current.state.phase);
               if (current.error) setError(current.error);
               if (current.state.phase === "stopped") {
                 dispose();
@@ -485,6 +533,8 @@ function Studio({ id }: { id: string }) {
         sessionAbort.current?.signal,
       );
       if (!stream.current || sessionAbort.current?.signal.aborted) return;
+      await activateCredits(expectedSession);
+      if (sessionAbort.current !== expectedSession || expectedSession?.signal.aborted) { releaseCredits(); return; }
       setConnected(true);
       setKey("");
       setHealth(
@@ -495,7 +545,7 @@ function Studio({ id }: { id: string }) {
         sessionAbort.current === expectedSession &&
         !expectedSession?.signal.aborted
       )
-        setError(e instanceof Error ? e.message : "Publishing failed.");
+        { releaseCredits(); await publisher.current.stop(); setError(e instanceof Error ? e.message : "Publishing failed."); }
     } finally {
       setPublishing(false);
     }
@@ -504,6 +554,7 @@ function Studio({ id }: { id: string }) {
     stopping.current = true;
     sessionAbort.current?.abort();
     cleanup.current?.();
+    releaseCredits();
     await publisher.current.stop();
     sessionAbort.current = null;
     setKey("");
@@ -517,6 +568,7 @@ function Studio({ id }: { id: string }) {
   }
   const canPublish =
     !!manifest?.ready &&
+    (!manifest.creditsRequired || !!credits && (credits.streamSeconds>0 || credits.endsAt>credits.serverNow)) &&
     !!manifest?.mint &&
     (!manifest.show.continuous || preparedSeconds(manifest.show) >= (manifest.show.bufferMinutes || 5) * 60) &&
     !!endpoint.trim() &&
@@ -528,6 +580,7 @@ function Studio({ id }: { id: string }) {
     <main className="lp acp-pages">
       <AcpNav />
       <div className="acp-live-shell">
+        <StreamCredits id={id} onState={updateCredits} />
         <div className="acp-live-heading">
           <div>
             <span className="lp-kicker">YOUR CHARACTER / BROADCAST STUDIO</span>

@@ -9,6 +9,7 @@ import {
   scriptMessages,
   scriptToClip,
 } from "@/lib/acp-script";
+import { streamCreditsEnabled, requireVideoCredit } from "@/lib/stream-credit-store";
 export const runtime = "nodejs";
 export const maxDuration = 60;
 export async function POST(req: Request) {
@@ -45,7 +46,8 @@ export async function POST(req: Request) {
       const draft = parsed.data;
       if (!draft.rightsConfirmed)
         throw new Error("Confirm character rights first.");
-      await takeQuota(`script:${who}`, 100);
+      if (streamCreditsEnabled()) await requireVideoCredit(body.id,who);
+      await takeQuota(`script:${who}`, streamCreditsEnabled() ? 600 : 100);
       const messages = body.messages.filter(
         (m) => m.at >= Date.now() - 120000 && m.at <= Date.now() + 10000,
       );

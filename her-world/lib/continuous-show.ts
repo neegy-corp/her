@@ -1,5 +1,6 @@
 import { initialShow, queueChat, type ChatMessage, type ShowPlan, type ShowState } from "./show";
 import type { RenderedClip, ShowDriver } from "./show-runner";
+import { VIDEO_CREDIT_EXHAUSTED } from "./stream-plans";
 
 /** Rendering never owns the playback lock. Each token has an independent queue and budget. */
 export class ContinuousShowRunner {
@@ -20,6 +21,14 @@ export class ContinuousShowRunner {
   private chatSince: number | null = null;
   private nextBackgroundAt = 0;
   constructor(readonly mint: string, readonly plan: ShowPlan, private driver: ShowDriver) {}
+  updateVideoAllowance(seconds: number) {
+    this.plan.maxGenerations = this.submitted + Math.floor(Math.max(0,seconds)/3);
+    // Only resume a request rejected before paid generation, never a failed or
+    // ambiguous provider submission. Continuous scenes request 15 seconds.
+    if (seconds>=15 && this.generationPaused && this.error===VIDEO_CREDIT_EXHAUSTED) {
+      this.generationPaused=false;this.error="";
+    }
+  }
   get buffered() { return this.queue.length + this.replies.length; }
   get nextClip() { return this.replies[0] || this.queue[0] || this.library[this.replayIndex % this.library.length]; }
   start(clips: RenderedClip[]) {

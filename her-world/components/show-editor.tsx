@@ -20,6 +20,7 @@ import type { CharacterDraft } from "@/lib/launchpad";
 import type { ShowPlan, ShowClip } from "@/lib/show";
 import { REFERENCE_LIMIT } from "@/lib/acp-config";
 import { addGeneratedScene, emptyScene } from "@/lib/creator-workflow";
+import StreamCredits from "./stream-credits";
 import ContinuousProgram from "./continuous-program";
 type RefPhoto = { id: string; name: string; file: Blob };
 type Render = {
@@ -264,6 +265,7 @@ export default function ShowEditor({
   }
   return (
     <div className="lp-show">
+      <StreamCredits id={draft.id} />
       {!servicesAvailable && <p className="lp-service-note">Connect your wallet and cloud services to generate videos. You can write your show now.</p>}
       {servicesAvailable && (!scriptsAvailable || !videosAvailable) && <p className="lp-service-note">{!scriptsAvailable ? "AI script generation is not connected. " : ""}{!videosAvailable ? "Video generation is not connected. " : ""}Your edits and uploaded media are preserved.</p>}
       <ContinuousProgram draft={draft} onChange={onChange} onBusy={setPreparing} servicesAvailable={servicesAvailable && scriptsAvailable && videosAvailable && !busy} />

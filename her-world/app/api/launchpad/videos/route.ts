@@ -20,6 +20,8 @@ import {
   safeVideoUrl,
 } from "@/lib/launchpad-media";
 import { HF_VIDEO, PORTRAIT_CLIP, higgsfield, hfVideoInput, persistHfMedia } from "@/lib/higgsfield";
+import { streamCreditsEnabled, claimCreditRender } from "@/lib/stream-credit-store";
+import { VIDEO_CREDIT_EXHAUSTED } from "@/lib/stream-plans";
 export const runtime = "nodejs";
 export const maxDuration = 60;
 async function handle(req: Request) {
@@ -187,7 +189,7 @@ async function handle(req: Request) {
         (r) => r.clip_id === clip.id && r.fingerprint === fingerprint,
       );
       if (existing) return json({ id: existing.id, status: existing.status });
-      await takeQuota(`video:${who}`, 80);
+      await takeQuota(`video:${who}`, streamCreditsEnabled() ? 500 : 80);
       const render = {
         id: crypto.randomUUID(),
         character_id: id,
@@ -200,13 +202,18 @@ async function handle(req: Request) {
         video_url: null,
         created_at: Date.now(),
       };
-      if (!(await claimRender(render)))
+      if (!(await (streamCreditsEnabled() ? claimCreditRender(render,clip.duration) : claimRender(render)))) {
+        // A concurrent request may have claimed this exact scene. Return its job,
+        // never convert an existing paid attempt into a retryable credit error.
+        const claimed = (await renders(id,who)).find(r=>r.clip_id===clip.id && r.fingerprint===fingerprint);
+        if (claimed) return json({id:claimed.id,status:claimed.status});
         return json(
           {
-            error: "This scene is already being generated. Refresh its status.",
+            error: streamCreditsEnabled() ? VIDEO_CREDIT_EXHAUSTED : "This scene is already being generated. Refresh its status.",
           },
-          409,
+          streamCreditsEnabled() ? 402 : 409,
         );
+      }
       // Persist before any charge. A timeout remains submitting; never automatically submit twice.
       const requestId =
         provider === "tavus"

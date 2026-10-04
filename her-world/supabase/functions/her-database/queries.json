@@ -18,6 +18,7 @@
   "INSERT INTO her_private.operator_notes (wallet,mint,thesis,updated_at) VALUES (?,?,?,?) ON CONFLICT (wallet,mint) DO UPDATE SET thesis = EXCLUDED.thesis, updated_at = EXCLUDED.updated_at WHERE operator_notes.updated_at < EXCLUDED.updated_at",
   "INSERT INTO her_private.operator_orders (id,wallet,mint,side,amount,thesis,token_name,symbol,decimals,request_id,transaction_message,unsigned_transaction,out_amount,expires,created_at,status) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
   "INSERT INTO her_private.stage_requests (id,wallet,name,topic,status,created_at) VALUES (?,?,?,?,'pending',?)",
+  "INSERT INTO her_private.stream_credit_burns (id,character_id,wallet,mint,minutes,raw_amount,program,message,created_at,expires,status) VALUES (?,?,?,?,?,?,?,?,?,?,'prepared')",
   "INSERT INTO her_private.wallet_sessions (id,wallet,expires) VALUES (?,?,?)",
   "SELECT * FROM her_private.burn_intents WHERE id = ? AND wallet = ?",
   "SELECT * FROM her_private.burn_intents WHERE id = ? AND wallet = ? AND expires > ?",
@@ -33,6 +34,8 @@
   "SELECT * FROM her_private.launchpad_renders WHERE character_id=? AND wallet=? ORDER BY created_at DESC LIMIT 150",
   "SELECT * FROM her_private.launchpad_renders WHERE character_id=? AND wallet=? ORDER BY created_at DESC LIMIT 30",
   "SELECT * FROM her_private.operator_orders WHERE id = ? AND wallet = ?",
+  "SELECT * FROM her_private.stream_credit_accounts WHERE character_id=? AND wallet=?",
+  "SELECT * FROM her_private.stream_credit_burns WHERE id=? AND wallet=?",
   "SELECT DISTINCT character FROM her_private.burn_receipts WHERE wallet = ? AND kind = 'character'",
   "SELECT c.id,c.document::jsonb->>'name' AS name,c.document::jsonb->>'symbol' AS symbol,c.document::jsonb->>'description' AS description,c.mint,c.document::jsonb->>'coinPfp' AS pfp,c.document::jsonb->>'coinBanner' AS banner FROM her_private.launchpad_characters c JOIN her_private.launchpad_coins t ON t.id=c.id AND t.wallet=c.wallet AND t.mint=c.mint AND t.signature=c.signature WHERE t.status='confirmed' ORDER BY c.updated_at DESC,c.id LIMIT 25 OFFSET ?",
   "SELECT enabled,desired,actual,revision,heartbeat,healthy FROM her_private.character_control WHERE id=1",
@@ -44,6 +47,7 @@
   "SELECT id,ends_at,winner,reason FROM her_private.character_rounds WHERE settled_at IS NOT NULL ORDER BY id DESC LIMIT 5",
   "SELECT id,mint,side,amount,thesis,token_name,symbol,status,signature,created_at,expires FROM her_private.operator_orders WHERE wallet = ? ORDER BY created_at DESC LIMIT 30",
   "SELECT id,mint,side,signature,thesis,created_at FROM her_private.operator_orders WHERE wallet = ? AND status IN ('submitting','submitted','unknown') ORDER BY created_at DESC LIMIT 30",
+  "SELECT id,minutes,signature,status FROM her_private.stream_credit_burns WHERE character_id=? AND wallet=? AND status='submitted' ORDER BY created_at DESC LIMIT 20",
   "SELECT mint,thesis,updated_at FROM her_private.operator_notes WHERE wallet = ? ORDER BY updated_at DESC LIMIT 100",
   "SELECT s.*, b.signature,b.amount FROM her_private.stage_requests s JOIN her_private.burn_receipts b ON s.id = b.id ORDER BY s.created_at DESC LIMIT 200",
   "SELECT s.*, b.signature,b.amount FROM her_private.stage_requests s JOIN her_private.burn_receipts b ON s.id = b.id WHERE s.wallet = ? ORDER BY s.created_at DESC LIMIT 30",
@@ -61,5 +65,10 @@
   "UPDATE her_private.operator_orders SET status = 'confirmed' WHERE id = ? AND wallet = ? AND status IN ('submitting','submitted','unknown')",
   "UPDATE her_private.operator_orders SET status = 'submitting', signature = ? WHERE id = ? AND wallet = ? AND status = 'prepared' AND expires > ? RETURNING id",
   "UPDATE her_private.operator_orders SET status = ? WHERE id = ? AND wallet = ? AND status = 'submitting'",
-  "UPDATE her_private.stage_requests SET status = ?, invite_url = COALESCE(?,invite_url) WHERE id = ? AND status = ?"
+  "UPDATE her_private.stage_requests SET status = ?, invite_url = COALESCE(?,invite_url) WHERE id = ? AND status = ?",
+  "UPDATE her_private.stream_credit_accounts SET ends_at=GREATEST(ends_at,?)+stream_seconds*1000,stream_seconds=0,session_id=? WHERE character_id=? AND wallet=? AND (session_id IS NULL OR session_id=? OR ends_at<=?) AND (stream_seconds>0 OR ends_at>?) RETURNING *",
+  "UPDATE her_private.stream_credit_accounts SET stream_seconds=stream_seconds+GREATEST(0,(ends_at-?)/1000),ends_at=0,session_id=NULL WHERE character_id=? AND wallet=? AND session_id=? RETURNING *",
+  "UPDATE her_private.stream_credit_burns SET signature=?,status='submitted' WHERE id=? AND wallet=? AND status='prepared' AND expires>? RETURNING id",
+  "WITH account AS (SELECT * FROM her_private.stream_credit_accounts WHERE character_id=? AND wallet=? FOR UPDATE), added AS (INSERT INTO her_private.launchpad_renders (id,character_id,wallet,clip_id,fingerprint,provider,status,created_at) SELECT ?,?,?,?, ?,?,'submitting',? FROM account WHERE video_seconds>=? AND (stream_seconds>0 OR ends_at>?) ON CONFLICT (character_id,clip_id,fingerprint) DO NOTHING RETURNING id), spent AS (UPDATE her_private.stream_credit_accounts SET video_seconds=video_seconds-? WHERE character_id=? AND wallet=? AND EXISTS(SELECT 1 FROM added) RETURNING character_id) SELECT id FROM added WHERE EXISTS(SELECT 1 FROM spent)",
+  "WITH credited AS (UPDATE her_private.stream_credit_burns SET status='credited' WHERE id=? AND wallet=? AND signature=? AND status='submitted' RETURNING character_id,wallet,minutes) INSERT INTO her_private.stream_credit_accounts (character_id,wallet,stream_seconds,video_seconds,ends_at) SELECT character_id,wallet,minutes*60,minutes*60,0 FROM credited ON CONFLICT (character_id) DO UPDATE SET stream_seconds=her_private.stream_credit_accounts.stream_seconds+CASE WHEN her_private.stream_credit_accounts.ends_at>? THEN 0 ELSE EXCLUDED.stream_seconds END,video_seconds=her_private.stream_credit_accounts.video_seconds+EXCLUDED.video_seconds,ends_at=CASE WHEN her_private.stream_credit_accounts.ends_at>? THEN her_private.stream_credit_accounts.ends_at+EXCLUDED.stream_seconds*1000 ELSE her_private.stream_credit_accounts.ends_at END RETURNING character_id"
 ]

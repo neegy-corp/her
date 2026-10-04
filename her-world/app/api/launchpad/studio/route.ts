@@ -3,6 +3,7 @@ import { json, setting, wallet } from "@/lib/server";
 import { ownedDraft, renders, assets } from "@/lib/launchpad-store";
 import { mediaDraftSchema } from "@/lib/launchpad";
 import { digest } from "@/lib/launchpad-media";
+import { streamCreditsEnabled } from "@/lib/stream-credit-store";
 export const runtime = "nodejs";
 export async function GET(req: Request) {
   try {
@@ -49,6 +50,7 @@ export async function GET(req: Request) {
         clips: clips.filter(Boolean),
         ready: clips.length > 0 && clips.every(Boolean),
         broadcastVerified: false,
+        creditsRequired: streamCreditsEnabled(),
       });
     });
   } catch {
